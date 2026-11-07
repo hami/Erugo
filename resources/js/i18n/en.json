@@ -963,7 +963,10 @@
       "forget_recipient_description": "Removes an email address from the recipients of every share, for example when someone asks to be forgotten. Emails already sent can't be recalled. Recipients are also removed automatically when a share's files are cleaned up.",
       "forget_recipient_button": "Forget",
       "forget_recipient_confirm": "Remove {email} from the recipients of every share? This can't be undone.",
-      "forget_recipient_done": "{value, plural, =0 {{email} wasn't on any share} one {{email} removed from # share} other {{email} removed from # shares}}"
+      "forget_recipient_done": "{value, plural, =0 {{email} wasn't on any share} one {{email} removed from # share} other {{email} removed from # shares}}",
+      "auth_provider_config_team_id": "Team ID",
+      "auth_provider_config_key_id": "Key ID",
+      "auth_provider_config_private_key": "Private key (.p8 contents)"
     },
     "system_auth_provider_info_link": "About {name}",
     "table": {
