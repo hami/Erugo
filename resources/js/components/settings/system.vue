@@ -63,6 +63,7 @@ const settings = ref({
   clean_files_after_days: '',
   share_url_mode: 'haiku',
   share_url_pattern: '******',
+  remember_recipients_default: true,
   locked_hidden_default_files: false,
   locked_hidden_default_stats: false,
   locked_hidden_default_message: false,
@@ -677,6 +678,12 @@ const handleDeleteAuthProvider = async (id) => {
                     placeholder="30"
                   />
                 </div>
+                <div class="setting-group-body-item">
+                  <div class="checkbox-container">
+                    <input type="checkbox" id="remember_recipients_default" v-model="settings.remember_recipients_default" />
+                    <label for="remember_recipients_default">{{ $t('settings.system.remember_recipients_default') }}</label>
+                  </div>
+                </div>
                 <h6 id="locked_hidden_defaults" class="mt-3 mb-3">{{ $t('settings.system.locked_hidden_defaults') }}</h6>
                 <div class="setting-group-body-item">
                   <div class="checkbox-container" v-for="detail in LOCKED_HIDEABLE" :key="detail">
@@ -747,6 +754,8 @@ const handleDeleteAuthProvider = async (id) => {
               <p>{{ $t('settings.system.max_share_size_description') }}</p>
               <h6>{{ $t('settings.system.clean_files_after') }}</h6>
               <p>{{ $t('settings.system.clean_files_after_description') }}</p>
+              <h6>{{ $t('settings.system.remember_recipients_default') }}</h6>
+              <p>{{ $t('settings.system.remember_recipients_default_description') }}</p>
               <h6>{{ $t('settings.system.locked_hidden_defaults') }}</h6>
               <p>{{ $t('settings.system.locked_hidden_defaults_description') }}</p>
               <h6>{{ $t('settings.system.allow_reverse_shares') }}</h6>

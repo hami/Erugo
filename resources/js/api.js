@@ -108,10 +108,14 @@ const bundleFilesIntoZip = async (files, onProgress) => {
 // Optional share settings sent when a share is created. Each is left out when not given,
 // so the server falls back to the system default.
 //   lockedHidden: details to hide until the password is entered (see LOCKED_HIDEABLE)
+//   rememberRecipients: keep the recipients on the share so they can be emailed again later
 const shareOptionsPayload = (options = {}) => {
   const payload = {}
   if (options.lockedHidden !== undefined) {
     payload.locked_hidden = options.lockedHidden
+  }
+  if (options.rememberRecipients !== undefined) {
+    payload.remember_recipients = options.rememberRecipients
   }
   return payload
 }
@@ -1616,7 +1620,7 @@ const clearTusFingerprint = (uploadUrl) => {
  * @param {Function} onProgress - Progress callback function
  * @param {Function} onComplete - Complete callback function
  * @param {Function} onError - Error callback function
- * @param {Object} options - Optional share settings: { lockedHidden } (see shareOptionsPayload)
+ * @param {Object} options - Optional share settings: { lockedHidden, rememberRecipients } (see shareOptionsPayload)
  */
 export const uploadFilesInChunks = async (
   files,

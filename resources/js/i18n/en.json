@@ -952,7 +952,9 @@
       "upload_modes": "Upload modes",
       "your_auth_providers": "Your Auth Providers",
       "locked_hidden_defaults": "Hidden on locked shares",
-      "locked_hidden_defaults_description": "What a password-protected share hides until the password is entered. These are the starting choices for new shares; they can be changed when a share is created or edited afterwards."
+      "locked_hidden_defaults_description": "What a password-protected share hides until the password is entered. These are the starting choices for new shares; they can be changed when a share is created or edited afterwards.",
+      "remember_recipients_default": "Remember recipients on new shares",
+      "remember_recipients_default_description": "Keeps the people a share is sent to on the share, so they can be emailed the link again or told when the link or password changes. The uploader can untick it for a share; recipients are still emailed the link once."
     },
     "system_auth_provider_info_link": "About {name}",
     "table": {
@@ -1134,7 +1136,8 @@
     "password_required": "Password is required to protect share",
     "time_remaining_suffix": "s",
     "time_remaining_text": "remaining",
-    "upload_mode_swapped": "Upload mode changed to {value}"
+    "upload_mode_swapped": "Upload mode changed to {value}",
+    "remember_recipients": "Remember recipients on this share"
   },
   "uploading": {
     "files": "{value, plural, one {Uploading # file} other {Uploading # files}}"

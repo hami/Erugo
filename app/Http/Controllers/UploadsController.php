@@ -84,7 +84,8 @@ class UploadsController extends Controller
       'uploadIds.*' => ['required', 'string'],
       'expiry_date' => ['required', 'date'],
       'locked_hidden' => ['sometimes', 'array'],
-      'locked_hidden.*' => ['string', Rule::in(Share::LOCKED_HIDEABLE)]
+      'locked_hidden.*' => ['string', Rule::in(Share::LOCKED_HIDEABLE)],
+      'remember_recipients' => ['sometimes', 'boolean']
     ]);
 
     if ($validator->fails()) {
@@ -424,14 +425,20 @@ class UploadsController extends Controller
 
     // Process recipients if provided (normal share flow)
     if ($request->has('recipients') && is_array($request->recipients)) {
+      // Keep who was sent the link, so they can be told if it changes, unless asked not to
+      $rememberRecipients = $request->has('remember_recipients')
+        ? $request->boolean('remember_recipients')
+        : filter_var(Setting::where('key', 'remember_recipients_default')->value('value') ?? true, FILTER_VALIDATE_BOOLEAN);
+
       foreach ($request->recipients as $recipient) {
         if (is_array($recipient) && isset($recipient['name']) && isset($recipient['email'])) {
-          // Remember who was sent the link, so they can be told if it changes
-          $share->recipients()->create([
-            'name' => $recipient['name'],
-            'email' => $recipient['email'],
-            'notified_at' => now()
-          ]);
+          if ($rememberRecipients) {
+            $share->recipients()->create([
+              'name' => $recipient['name'],
+              'email' => $recipient['email'],
+              'notified_at' => now()
+            ]);
+          }
           $this->sendShareCreatedEmail($share, $recipient);
         }
       }

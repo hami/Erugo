@@ -100,6 +100,7 @@ const shareFormPasswordConfirm = ref('')
 const sharePassword = ref('')
 const sharePasswordConfirm = ref('')
 const shareLockedHidden = ref(defaultLockedHidden())
+const shareRememberRecipients = ref(domData().remember_recipients_default !== false)
 
 const passwordFormErrors = ref({
   password: null,
@@ -484,7 +485,8 @@ const doTusUpload = async (uploadId) => {
         resetUploadState()
       },
       {
-        lockedHidden: shareLockedHidden.value
+        lockedHidden: shareLockedHidden.value,
+        rememberRecipients: shareRememberRecipients.value
       }
     )
   } catch (error) {
@@ -906,6 +908,10 @@ const filesByDirectory = computed(() => {
         </template>
       </div>
     </div>
+    <div class="checkbox-container remember-recipients" v-if="!store.isGuest() && recipients.length > 0">
+      <input type="checkbox" id="share_remember_recipients" v-model="shareRememberRecipients" />
+      <label for="share_remember_recipients">{{ $t('uploader.remember_recipients') }}</label>
+    </div>
 
     <div class="input-container mb-0">
       <input
@@ -1292,6 +1298,21 @@ const filesByDirectory = computed(() => {
     width: 100%;
     display: flex;
     gap: 10px;
+  }
+}
+
+// Its own row under the recipients box, shown once there is a recipient; no help text,
+// so no second grid row
+.remember-recipients {
+  width: auto;
+  grid-template-rows: auto;
+  margin: 0 10px 10px;
+  padding: 0 10px;
+  label {
+    font-size: 0.85rem;
+  }
+  label::before {
+    flex-shrink: 0;
   }
 }
 </style>

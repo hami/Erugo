@@ -26,6 +26,7 @@ function getSettings()
         ->orWhere('key', 'max_expiry_time')
         ->orWhere('key', 'default_expiry_time')
         ->orWhere('key', 'like', 'locked_hidden_default_%')
+        ->orWhere('key', 'remember_recipients_default')
         ->get();
 
     $settings = $settings->map(function ($setting) use ($settingsService) {
