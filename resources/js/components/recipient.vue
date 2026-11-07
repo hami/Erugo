@@ -1,6 +1,7 @@
 <script setup>
 import { ref, defineProps, onMounted, nextTick } from 'vue'
 import { CircleMinus } from 'lucide-vue-next'
+import RecipientSuggestions from './recipientSuggestions.vue'
 const props = defineProps({
   recipient: {
     type: Object,
@@ -54,6 +55,15 @@ const togglePopover = () => {
   }
 }
 
+// The field being typed in drives the suggestions from past shares
+const suggestionQuery = ref('')
+const useSuggestion = (picked) => {
+  props.recipient.name = picked.name
+  props.recipient.email = picked.email
+  suggestionQuery.value = ''
+  togglePopover()
+}
+
 const emailInput = ref(null)
 const moveFocusToEmail = () => {
   if (emailInput.value) {
@@ -80,8 +90,22 @@ defineExpose({
     <div class="recipient-popover" :class="{ active: isPopoverOpen }" ref="recipientPopoverRef">
       <div class="recipient-popover-content">
         <div>
-          <input type="text" v-model="recipient.name" :placeholder="$t('full_name')" @keyup.enter="moveFocusToEmail" />
-          <input type="text" v-model="recipient.email" :placeholder="$t('email')" ref="emailInput" @keyup.enter="togglePopover" />
+          <input
+            type="text"
+            v-model="recipient.name"
+            :placeholder="$t('full_name')"
+            @input="suggestionQuery = recipient.name"
+            @keyup.enter="moveFocusToEmail"
+          />
+          <input
+            type="text"
+            v-model="recipient.email"
+            :placeholder="$t('email')"
+            ref="emailInput"
+            @input="suggestionQuery = recipient.email"
+            @keyup.enter="togglePopover"
+          />
+          <RecipientSuggestions v-if="isPopoverOpen" :query="suggestionQuery" @pick="useSuggestion" />
         </div>
         <div class="button-container">
           <div class="button-outside-label">

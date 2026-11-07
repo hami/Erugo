@@ -117,6 +117,11 @@ Route::group([], function ($router) {
         Route::get('/group/{group}', [SettingsController::class, 'readGroup'])->name('settings.readGroup');
     });
 
+    //suggest people the user has sent shares to before [auth]
+    Route::get('/recipients/suggestions', [ShareRecipientsController::class, 'suggestions'])
+        ->middleware('auth')
+        ->name('recipients.suggestions');
+
     //manage shares [auth]
     Route::group(['prefix' => 'shares', 'middleware' => ['auth']], function ($router) {
         //get my shares

@@ -169,4 +169,28 @@ class ShareManagementTest extends ShareTestCase
       ->assertOk()
       ->assertJsonCount(0, 'data.recipients');
   }
+
+  public function test_past_recipients_are_suggested_only_to_whoever_sent_to_them(): void
+  {
+    $owner = $this->makeUser();
+    $first = $this->makeShare($owner);
+    $second = $this->makeShare($owner);
+    $first->recipients()->create(['name' => 'Alice Old', 'email' => 'alice@example.com']);
+    $second->recipients()->create(['name' => 'Alice Archer', 'email' => 'ALICE@example.com']);
+    $second->recipients()->create(['name' => 'Bob', 'email' => 'bob@example.com']);
+
+    $someoneElse = $this->makeUser();
+    $this->makeShare($someoneElse)->recipients()->create(['name' => 'Alicia', 'email' => 'alicia@example.com']);
+
+    // one entry per address, using the most recent name
+    $this->actingAs($owner)
+      ->getJson('/api/recipients/suggestions?q=ali')
+      ->assertOk()
+      ->assertJsonCount(1, 'data.recipients')
+      ->assertJsonPath('data.recipients.0.name', 'Alice Archer');
+
+    $this->actingAs($owner)->getJson('/api/recipients/suggestions?q=example')->assertJsonCount(2, 'data.recipients');
+    $this->actingAs($owner)->getJson('/api/recipients/suggestions?q=')->assertJsonCount(0, 'data.recipients');
+    $this->actingAs($someoneElse)->getJson('/api/recipients/suggestions?q=bob')->assertJsonCount(0, 'data.recipients');
+  }
 }

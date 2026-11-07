@@ -11,7 +11,8 @@ use App\Mail\shareCreatedMail;
 use App\Jobs\sendEmail;
 
 /**
- * The people a share was sent to: list, add, edit, remove, and send them the link again.
+ * The people a share was sent to: list, add, edit, remove, and send them the link again,
+ * plus suggestions from past shares when adding new ones.
  */
 class ShareRecipientsController extends Controller
 {
@@ -113,6 +114,52 @@ class ShareRecipientsController extends Controller
     $this->sendLink($share, $recipient);
 
     return $this->recipientResponse($share, $recipient, 'Link sent');
+  }
+
+  /**
+   * People the signed-in user has sent shares to before, matching ?q= on name or email,
+   * most recently used first. Only recipients still recorded on the user's own shares count.
+   */
+  public function suggestions(Request $request)
+  {
+    $user = Auth::user();
+    if (!$user) {
+      return response()->json([
+        'status' => 'error',
+        'message' => 'Unauthorized'
+      ], 401);
+    }
+
+    $query = trim((string) $request->query('q', ''));
+    if ($query === '') {
+      return response()->json([
+        'status' => 'success',
+        'message' => 'Recipient suggestions',
+        'data' => ['recipients' => []]
+      ]);
+    }
+
+    // A % or _ typed by the user just widens the match, and only over their own contacts
+    $like = '%' . $query . '%';
+    $recipients = ShareRecipient::select('share_recipients.name', 'share_recipients.email')
+      ->join('shares', 'shares.id', '=', 'share_recipients.share_id')
+      ->where('shares.user_id', $user->id)
+      ->where(function ($q) use ($like) {
+        $q->where('share_recipients.name', 'like', $like)
+          ->orWhere('share_recipients.email', 'like', $like);
+      })
+      ->orderByDesc('share_recipients.id')
+      ->limit(100)
+      ->get()
+      ->unique(fn($recipient) => strtolower($recipient->email))
+      ->take(8)
+      ->values();
+
+    return response()->json([
+      'status' => 'success',
+      'message' => 'Recipient suggestions',
+      'data' => ['recipients' => $recipients]
+    ]);
   }
 
   private function sendLink(Share $share, ShareRecipient $recipient): void

@@ -1024,6 +1024,20 @@ export const updateShareRecipient = async (shareId, recipientId, changes) =>
 export const deleteShareRecipient = async (shareId, recipientId) =>
   shareRecipientRequest(`${apiUrl}/api/shares/${shareId}/recipients/${recipientId}`, 'DELETE')
 
+export const getRecipientSuggestions = async (query) => {
+  const response = await fetchWithAuth(`${apiUrl}/api/recipients/suggestions?q=${encodeURIComponent(query)}`, {
+    method: 'GET',
+    headers: {
+      ...addJsonHeader()
+    }
+  })
+  const data = await response.json()
+  if (!response.ok) {
+    throw new Error(data.message)
+  }
+  return data.data.recipients
+}
+
 export const resendShareRecipient = async (shareId, recipientId) =>
   shareRecipientRequest(`${apiUrl}/api/shares/${shareId}/recipients/${recipientId}/resend`, 'POST')
 

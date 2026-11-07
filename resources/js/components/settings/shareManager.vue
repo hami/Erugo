@@ -17,6 +17,7 @@ import { useTranslate } from '@tolgee/vue'
 import { updateShare, changeShareAccess, addShareRecipient } from '../../api'
 import LockedHiddenOptions from '../lockedHiddenOptions.vue'
 import ShareRecipientRow from './shareRecipientRow.vue'
+import RecipientSuggestions from '../recipientSuggestions.vue'
 
 const { t } = useTranslate()
 const toast = useToast()
@@ -58,6 +59,7 @@ const nameError = ref(null)
 const newRecipientName = ref('')
 const newRecipientEmail = ref('')
 const sendToNew = ref(true)
+const recipientQuery = ref('')
 
 // Link & password: step 'choose' then step 'notify'
 const accessStep = ref('choose')
@@ -172,11 +174,18 @@ const addRecipient = async () => {
     )
     newRecipientName.value = ''
     newRecipientEmail.value = ''
+    recipientQuery.value = ''
   } catch (error) {
     toast.error(error.errors?.email ? t.value('settings.share.recipients.invalid_email') : error.message)
   } finally {
     busy.value = false
   }
+}
+
+const useSuggestion = (picked) => {
+  newRecipientName.value = picked.name
+  newRecipientEmail.value = picked.email
+  recipientQuery.value = ''
 }
 
 // --- Link & password ---
@@ -327,14 +336,25 @@ const copyUrl = () => {
 
         <div class="add-recipient">
           <div class="add-recipient-fields">
-            <input type="text" v-model="newRecipientName" :placeholder="$t('settings.users.name')" />
+            <input
+              type="text"
+              v-model="newRecipientName"
+              :placeholder="$t('settings.users.name')"
+              @input="recipientQuery = newRecipientName"
+            />
             <input
               type="email"
               v-model="newRecipientEmail"
               :placeholder="$t('settings.users.email')"
+              @input="recipientQuery = newRecipientEmail"
               @keyup.enter="addRecipient"
             />
           </div>
+          <RecipientSuggestions
+            :query="recipientQuery"
+            :exclude="recipients.map((r) => r.email)"
+            @pick="useSuggestion"
+          />
           <div class="checkbox-container">
             <input type="checkbox" id="manage_send_to_new" v-model="sendToNew" />
             <label for="manage_send_to_new">{{ $t('settings.share.recipients.send_now') }}</label>
