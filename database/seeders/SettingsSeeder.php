@@ -167,6 +167,22 @@ class SettingsSeeder extends Seeder
                 'updated_at' => now()
             ],
             [
+                'key' => 'owner_download_expired_enabled',
+                'value' => 'true',
+                'previous_value' => null,
+                'group' => 'system.shares',
+                'created_at' => now(),
+                'updated_at' => now()
+            ],
+            [
+                'key' => 'admin_download_expired_enabled',
+                'value' => 'true',
+                'previous_value' => null,
+                'group' => 'system.shares',
+                'created_at' => now(),
+                'updated_at' => now()
+            ],
+            [
                 'key' => 'default_upload_mode',
                 'value' => 'chunked',
                 'previous_value' => null,

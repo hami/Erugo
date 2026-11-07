@@ -130,6 +130,9 @@ Route::group([], function ($router) {
         //set download limit
         Route::post('/{id}/set-download-limit', [SharesController::class, 'setDownloadLimit'])->name('shares.setDownloadLimit');
 
+        //short-lived link to download a share even once it has expired (admins any, owners their own)
+        Route::post('/{id}/download-link', [SharesController::class, 'signedDownloadLink'])->name('shares.signedDownloadLink');
+
         //prune expired shares
         Route::post('/prune-expired', [SharesController::class, 'pruneExpiredShares'])->name('shares.pruneExpired');
     });
@@ -198,6 +201,11 @@ Route::group([], function ($router) {
     //download shares [public]
     Route::any('/shares/{share}/download', [SharesController::class, 'download'])->name('shares.download');
     
+    //an admin's or owner's download, reached only through a signed link from download-link
+    Route::get('/shares/{id}/signed-download', [SharesController::class, 'signedDownload'])
+        ->middleware('signed:relative')
+        ->name('shares.signedDownload');
+
     //download specific file from share [public] - filepath can include nested directories
     Route::get('/shares/{share}/download/file/{filepath}', [SharesController::class, 'downloadFile'])
         ->where('filepath', '.*')

@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, inject, defineExpose, computed } from 'vue'
-import { getAllShares, expireShare, extendShare, setDownloadLimit } from '../../api'
+import { getAllShares, expireShare, getSignedDownloadLink, extendShare, setDownloadLimit } from '../../api'
 import {
   SquareArrowOutUpRight,
   CalendarPlus,
@@ -15,6 +15,8 @@ import { useToast } from 'vue-toastification'
 import { niceFileSize, niceDate, niceFileName, niceNumber } from '../../utils'
 import HelpTip from '../helpTip.vue'
 import { useTranslate } from '@tolgee/vue'
+import { store } from '../../store'
+import { domData } from '../../domData'
 
 const { t } = useTranslate()
 
@@ -82,8 +84,19 @@ const handleDownloadLimitChange = async (share) => {
     })
 }
 
+// Admins download through a short-lived link that also works once a share has expired
+const signedDownloads = store.isAdmin() && domData().admin_download_expired_enabled !== false
+
 const downloadShare = async (share) => {
-  window.location.href = `/api/shares/${share.long_id}/download`
+  if (!signedDownloads) {
+    window.location.href = `/api/shares/${share.long_id}/download`
+    return
+  }
+  try {
+    window.location.href = await getSignedDownloadLink(share.id)
+  } catch (error) {
+    toast.error(t.value('settings.error.shareDownload'))
+  }
 }
 
 const enableExpireShareButton = (share) => {
@@ -95,7 +108,7 @@ const enableExtendShareButton = (share) => {
 }
 
 const enableDownloadButton = (share) => {
-  return !share.expired && !share.deleted
+  return !share.deleted && (!share.expired || signedDownloads)
 }
 
 const setShowDeletedShares = (value) => {

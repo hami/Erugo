@@ -917,6 +917,20 @@ export const expireShare = async (id) => {
   return data.data.share
 }
 
+export const getSignedDownloadLink = async (id) => {
+  const response = await fetchWithAuth(`${apiUrl}/api/shares/${id}/download-link`, {
+    method: 'POST',
+    headers: {
+      ...addJsonHeader()
+    }
+  })
+  const data = await response.json()
+  if (!response.ok) {
+    throw new Error(data.message)
+  }
+  return data.data.url
+}
+
 export const extendShare = async (id) => {
   const response = await fetchWithAuth(`${apiUrl}/api/shares/${id}/extend`, {
     method: 'POST',
