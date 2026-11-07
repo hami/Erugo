@@ -2,6 +2,8 @@
 
 [![Discord Banner 2](https://img.shields.io/badge/Join%20Us%20On%20Discord-8A2BE2)](https://discord.gg/M74X2wmqY8)
 
+> **This is a fork.** [`hami/Erugo`](https://github.com/hami/Erugo), branch `saru`, is [Erugo](https://github.com/ErugoOSS/Erugo) v0.2.15 plus the share features listed under [What's new in this fork](#whats-new-in-this-fork). Everything else is upstream Erugo. Please report problems with these features here rather than upstream.
+
 # Erugo
 
 **Your Self-Hosted File Sharing Platform**
@@ -19,6 +21,142 @@ Erugo is a powerful, self-hosted file-sharing platform that puts you in **comple
 If you would like to support Erugo's development, please consider donating to the project. Your support helps me maintain and improve the software.
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/B0B11BF8EC)
+
+## What's new in this fork
+
+These features build on upstream v0.2.15. Each one lives on its own branch that starts from v0.2.15, so you can take only the ones you want: merge a branch (and whatever it needs) into your copy of Erugo. This `saru` branch is all of them merged together.
+
+| Branch | What it adds | Needs |
+| --- | --- | --- |
+| `test-harness` | Lets feature tests boot the app repeatedly; a shared `ShareTestCase` | — |
+| `locked-shares` | Locked shares: choose what stays hidden, unlock once | `test-harness` |
+| `manage-share` | Manage a share after it's made (recipients, link and password), the option not to remember recipients, suggestions of past recipients, and privacy controls. One commit each, in that order. | `locked-shares` |
+| `delete-share` | Delete a share now | `test-harness` |
+| `expired-download` | Admins, and owners, can download expired shares | `test-harness` |
+| `apple-sign-in` | Sign in with Apple | `test-harness` |
+| `trusted-proxies` | Trust a reverse proxy named in `TRUSTED_PROXIES` | `test-harness` |
+| `theme-footer` | Themes can style the "Powered by" footer | — |
+
+Branches that need only `test-harness` don't touch each other's code, but they do add lines next to each other in shared lists (settings, strings, the System settings page). Merging two of them may need those conflicts resolved by keeping both sides.
+
+### Manage a share after it's made
+
+Each row in My Shares and All Shares has a row of icons: **Recipients** (with a count), **New link**, **Change password**, **Edit details**, **Download** and **Delete**. The first four open the Manage dialog at the matching tab. Below them, **Expire Now** and **Extend** share the width evenly.
+
+- **Details:** rename the share, remove its password, and choose what it hides while locked (see below).
+- **Recipients:** everyone the share was sent to. Each person has icons to email them the link again, edit their name or email, or remove them. New recipients can be added, and optionally sent the link straight away. Recipients are recorded when a share is created, unless *Remember recipients on this share* is unticked in the uploader. The default is set under Settings → System → Shares. Shares created before this fork have none until you add them. When adding someone, in the uploader or here, people you've sent shares to before are suggested as you type. You only ever see your own contacts.
+- **Link & password:** choose one of the following, then choose who to tell: all recipients, only the ones you tick, or nobody.
+  - **New link:** the current link stops working at once.
+  - **Change password** (or **Set a password** if the share doesn't have one).
+  - **New link and password:** change both together.
+
+  When people are emailed, they get an "Access to your files has changed" message, which can be edited under Email Templates. For password changes there's an option, off by default, to include the new password in the email; otherwise it says the sender will pass it on. To cut someone off for good, remove them from the recipients first.
+- API:
+  - `PUT /api/shares/{id}` (name, `locked_hidden`, `remove_password`)
+  - `POST /api/shares/{id}/change-access` (`new_link`, `password` + `password_confirmation`, `notify`: [recipient ids], `include_password`)
+  - `POST|PUT|DELETE /api/shares/{id}/recipients[/{recipientId}]`
+  - `POST /api/shares/{id}/recipients/{recipientId}/resend`
+
+### Privacy controls
+
+Upstream Erugo emails recipients but keeps nothing about them. This fork stores them, so these controls help an operator meet GDPR-style expectations. Settings are under Settings → System → Shares.
+
+- **Retention:** a share's recipients are deleted when its files are cleaned up.
+- **Forget a recipient** (admins only): removes one email address from every share, for requests to be forgotten. Emails already sent can't be recalled.
+- **Suggest past recipients:** on by default; turn it off to stop contacts being reused across shares.
+- **Allow new passwords in emails:** on by default; turn it off and passwords are never emailed. When a password is emailed, it sits in the app's database in plain text until the email is sent.
+
+### Choose what a locked share hides
+
+A password-protected share can keep any of these hidden until the password is entered:
+
+- the file list
+- the file count and total size
+- the message to recipients
+- the sender's name
+- the share's name (the page shows "Password-protected share" instead)
+
+The expiry always shows.
+
+- **Defaults** are set under Settings → System → Shares → *Hidden on locked shares*. They are copied onto each new share, so changing them later doesn't alter existing shares.
+- **Per share:** the uploader's password dialog and the Edit dialog have the same options, under *Hidden until unlocked*.
+- API: `POST /api/shares/{share}/unlock` (body `{"password": "..."}`). Hidden fields come back as `null` from `GET /api/shares/{share}`, which also lists them in `hidden`.
+
+### An unlocked share stays unlocked
+
+- Once someone enters the right password, their browser stays unlocked until the share expires. Downloading the whole share or single files needs nothing more.
+- Unlocks are remembered with an HttpOnly cookie holding a signature over the share's id, link and password hash. Nothing about the password is stored in the browser.
+- Changing the password or regenerating the link locks everyone out again.
+- Clicking a single file on a password-protected share now downloads it. Upstream, this didn't send the password.
+
+### Other changes
+
+- Wrong share passwords are rate limited: after 10 wrong tries in 10 minutes for a share from one IP address, further tries are refused for a while. This applies to unlocking and to both kinds of download.
+- The password hash is no longer included in the share JSON sent to owners and admins.
+- The new interface text is in English only for now; other languages fall back to English.
+
+### Sign in with Apple
+
+Apple is available as a login provider, alongside Google, Microsoft, Authentik and OpenID Connect. Add it under Settings → System → Auth providers. It needs an Apple Developer account and four values:
+
+- **Client ID:** a Services ID with Sign in with Apple turned on. Its website domain and return URL are your Erugo domain and `https://<your domain>/auth/provider/<provider uuid>/callback`.
+- **Team ID** and **Key ID:** 10 characters each.
+- **Private key:** the contents of the `.p8` file for a key with Sign in with Apple enabled. Pasting it into the one-line field is fine.
+
+Erugo signs a short-lived client secret from the key at each sign-in, so there's no secret to renew. People who choose Hide My Email get a relay address, so they should link Apple from their profile while signed in.
+
+### Delete a share now
+
+Upstream, an expired share's files stay on disk until the cleanup period has passed (30 days by default). Each row in My Shares and All Shares now has a **Delete** icon. After a confirmation, it removes the files at once, ends the link and clears the recipients. The share stays in the list marked as deleted, just as the scheduled cleanup leaves it.
+
+- Admins can delete any share from All Shares.
+- Owners can delete their own shares from My Shares. Turn off *Let people delete their own shares* under Settings → System → Shares to leave deleting to admins.
+- API: `DELETE /api/shares/{id}`
+
+### Download expired shares
+
+Upstream, nobody can download a share once it has expired, even though its files stay on disk until the cleanup. In this fork the **Download** icon keeps working for any share that hasn't been deleted, whether it has expired, run out of downloads or is password protected:
+
+- **Admins:** any share, from My Shares or All Shares. Turn off *Let admins download expired shares* to stop this.
+- **Owners:** their own shares, from My Shares. Turn off *Let people download their own expired shares* to stop this.
+
+Both settings are under Settings → System → Shares and start on. The browser is given a signed link that lasts five minutes. These downloads don't count towards a share's download limit and don't email the owner. Turning a setting off also stops links already handed out.
+
+- API: `POST /api/shares/{id}/download-link` returns the signed `GET /api/shares/{id}/signed-download` link.
+
+### Running behind a reverse proxy
+
+Behind a proxy, upstream Erugo sees every request as plain http from the proxy's own address. So it can't mark its login cookie as secure, it builds http links, and per-visitor limits such as wrong-password tries count everyone as one visitor. Set the `TRUSTED_PROXIES` environment variable to the proxy's address, a range such as `172.16.0.0/12`, several separated by commas, or `*`. Erugo then believes the proxy's `X-Forwarded-*` headers. Unset, nothing changes. The login cookie is now marked secure whenever the request is https.
+
+### Theme footer colours
+
+The "Powered by" line sits on the background image, not on a panel, so the panel colours a theme uses don't always read there. A theme can add an optional `footer` section:
+
+```json
+"footer": {
+  "background": "rgba(246, 242, 234, 0.9)",
+  "text": "rgb(44, 50, 58)",
+  "link": "rgb(50, 113, 172)",
+  "linkHover": "rgb(30, 80, 130)"
+}
+```
+
+Every key is optional. Themes without the section look as before.
+
+### Tests
+
+The fork's features have feature tests in `tests/Feature/Shares`, `tests/Feature/Auth` and `tests/Feature/Http`, and each branch passes its own tests on its own. Run them with `php artisan test tests/Feature/Shares tests/Feature/Auth tests/Feature/Http`. They use an in-memory SQLite database and a temporary storage folder.
+
+### Building
+
+There's no published image for this fork yet. To build one:
+
+```bash
+git clone -b saru https://github.com/hami/Erugo.git && cd Erugo
+docker build -t erugo:saru -f docker/alpine/Dockerfile .
+```
+
+Use `image: erugo:saru` in place of `wardy784/erugo` in the compose file below. Existing installs pick up the new database tables and settings automatically when the container starts.
 
 ## Quick Start
 
