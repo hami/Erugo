@@ -954,7 +954,16 @@
       "locked_hidden_defaults": "Hidden on locked shares",
       "locked_hidden_defaults_description": "What a password-protected share hides until the password is entered. These are the starting choices for new shares; they can be changed when a share is created or edited afterwards.",
       "remember_recipients_default": "Remember recipients on new shares",
-      "remember_recipients_default_description": "Keeps the people a share is sent to on the share, so they can be emailed the link again or told when the link or password changes. The uploader can untick it for a share; recipients are still emailed the link once."
+      "remember_recipients_default_description": "Keeps the people a share is sent to on the share, so they can be emailed the link again or told when the link or password changes. The uploader can untick it for a share; recipients are still emailed the link once.",
+      "recipient_suggestions_enabled": "Suggest past recipients",
+      "recipient_suggestions_enabled_description": "When adding a recipient, offer people the user has sent shares to before. Each user only ever sees their own contacts.",
+      "password_in_email_allowed": "Allow new passwords in emails",
+      "password_in_email_allowed_description": "Lets people choose to put a share's new password in the email telling recipients it changed. Turn this off if passwords should only ever be passed on another way.",
+      "forget_recipient": "Forget a recipient",
+      "forget_recipient_description": "Removes an email address from the recipients of every share, for example when someone asks to be forgotten. Emails already sent can't be recalled. Recipients are also removed automatically when a share's files are cleaned up.",
+      "forget_recipient_button": "Forget",
+      "forget_recipient_confirm": "Remove {email} from the recipients of every share? This can't be undone.",
+      "forget_recipient_done": "{value, plural, =0 {{email} wasn't on any share} one {{email} removed from # share} other {{email} removed from # shares}}"
     },
     "system_auth_provider_info_link": "About {name}",
     "table": {

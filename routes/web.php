@@ -27,6 +27,8 @@ function getSettings()
         ->orWhere('key', 'default_expiry_time')
         ->orWhere('key', 'like', 'locked_hidden_default_%')
         ->orWhere('key', 'remember_recipients_default')
+        ->orWhere('key', 'recipient_suggestions_enabled')
+        ->orWhere('key', 'password_in_email_allowed')
         ->get();
 
     $settings = $settings->map(function ($setting) use ($settingsService) {

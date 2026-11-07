@@ -1024,6 +1024,22 @@ export const updateShareRecipient = async (shareId, recipientId, changes) =>
 export const deleteShareRecipient = async (shareId, recipientId) =>
   shareRecipientRequest(`${apiUrl}/api/shares/${shareId}/recipients/${recipientId}`, 'DELETE')
 
+// Admin only: remove an email address from the recipients of every share
+export const forgetRecipient = async (email) => {
+  const response = await fetchWithAuth(`${apiUrl}/api/recipients/forget`, {
+    method: 'POST',
+    headers: {
+      ...addJsonHeader()
+    },
+    body: JSON.stringify({ email })
+  })
+  const data = await response.json()
+  if (!response.ok) {
+    throw new Error(data.message)
+  }
+  return data.data.removed
+}
+
 export const getRecipientSuggestions = async (query) => {
   const response = await fetchWithAuth(`${apiUrl}/api/recipients/suggestions?q=${encodeURIComponent(query)}`, {
     method: 'GET',

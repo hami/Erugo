@@ -152,6 +152,11 @@ Route::group([], function ($router) {
         Route::post('/prune-expired', [SharesController::class, 'pruneExpiredShares'])->name('shares.pruneExpired');
     });
 
+    //forget a recipient across every share [auth, admin]
+    Route::post('/recipients/forget', [ShareRecipientsController::class, 'forget'])
+        ->middleware(['auth', Admin::class])
+        ->name('recipients.forget');
+
     //all shares [auth, admin]
     Route::group(['prefix' => 'shares', 'middleware' => ['auth', Admin::class]], function ($router) {
         //get all shares (admin only)

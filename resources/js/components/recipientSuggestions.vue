@@ -1,6 +1,7 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { getRecipientSuggestions } from '../api'
+import { domData } from '../domData'
 
 // Suggests people the user has sent shares to before, for whatever is typed in `query`
 const props = defineProps({
@@ -18,6 +19,8 @@ const props = defineProps({
 const emit = defineEmits(['pick'])
 
 const suggestions = ref([])
+// Admins can turn suggestions off in Settings → System → Shares
+const enabled = domData().recipient_suggestions_enabled !== false
 let timer = null
 let lastRequest = 0
 
@@ -26,7 +29,7 @@ watch(
   (query) => {
     clearTimeout(timer)
     const q = (query || '').trim()
-    if (q.length < 2) {
+    if (!enabled || q.length < 2) {
       suggestions.value = []
       return
     }

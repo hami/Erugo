@@ -18,6 +18,7 @@ import { updateShare, changeShareAccess, addShareRecipient } from '../../api'
 import LockedHiddenOptions from '../lockedHiddenOptions.vue'
 import ShareRecipientRow from './shareRecipientRow.vue'
 import RecipientSuggestions from '../recipientSuggestions.vue'
+import { domData } from '../../domData'
 
 const { t } = useTranslate()
 const toast = useToast()
@@ -71,6 +72,8 @@ const notifyWho = ref('all') // 'all', 'some' or 'none'
 const chosen = ref({})
 const includePassword = ref(false)
 const copied = ref(false)
+// Admins can stop new passwords ever going out by email
+const passwordEmailsAllowed = domData().password_in_email_allowed !== false
 
 watch(
   () => props.share,
@@ -220,7 +223,7 @@ const applyAccess = async () => {
   if (changesPassword.value) {
     changes.password = password.value
     changes.password_confirmation = passwordConfirm.value
-    changes.include_password = includePassword.value
+    changes.include_password = passwordEmailsAllowed && includePassword.value
   }
   busy.value = true
   try {
@@ -479,7 +482,7 @@ const copyUrl = () => {
         </div>
         <p v-if="!recipients.length" class="muted">{{ $t('settings.share.recipients.none') }}</p>
 
-        <div class="checkbox-container" v-if="changesPassword && notifyWho !== 'none'">
+        <div class="checkbox-container" v-if="passwordEmailsAllowed && changesPassword && notifyWho !== 'none'">
           <input type="checkbox" id="manage_include_password" v-model="includePassword" />
           <label for="manage_include_password">{{ $t('settings.share.access.include_password') }}</label>
         </div>

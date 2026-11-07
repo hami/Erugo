@@ -831,7 +831,9 @@ class SharesController extends Controller
     $share->save();
 
     $notifyIds = collect($request->input('notify', []))->map(fn($id) => (int) $id);
-    $includePassword = $newPassword !== null && $request->boolean('include_password');
+    // Admins can stop new passwords ever being put in an email
+    $passwordEmailsAllowed = filter_var(Setting::where('key', 'password_in_email_allowed')->value('value') ?? true, FILTER_VALIDATE_BOOLEAN);
+    $includePassword = $passwordEmailsAllowed && $newPassword !== null && $request->boolean('include_password');
     $senderName = $share->user ? $share->user->name : $user->name;
     $notified = [];
     foreach ($share->recipients as $recipient) {

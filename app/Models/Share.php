@@ -177,6 +177,9 @@ class Share extends Model
       $this->status = 'deleted';
       $this->save();
 
+      // Recipients are personal data kept only so they can be told about this share
+      $this->recipients()->delete();
+
       if ($this->invite) {
         $this->invite->delete();
       }

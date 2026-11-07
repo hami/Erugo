@@ -454,6 +454,22 @@ class SettingsSeeder extends Seeder
                 'updated_at' => now()
             ],
             [
+                'key' => 'recipient_suggestions_enabled',
+                'value' => 'true',
+                'previous_value' => null,
+                'group' => 'system.shares',
+                'created_at' => now(),
+                'updated_at' => now()
+            ],
+            [
+                'key' => 'password_in_email_allowed',
+                'value' => 'true',
+                'previous_value' => null,
+                'group' => 'system.shares',
+                'created_at' => now(),
+                'updated_at' => now()
+            ],
+            [
                 'key' => 'locked_hidden_default_files',
                 'value' => 'false',
                 'previous_value' => null,

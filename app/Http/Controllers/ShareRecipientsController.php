@@ -7,12 +7,14 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Share;
 use App\Models\ShareRecipient;
+use App\Models\Setting;
 use App\Mail\shareCreatedMail;
 use App\Jobs\sendEmail;
 
 /**
  * The people a share was sent to: list, add, edit, remove, and send them the link again,
- * plus suggestions from past shares when adding new ones.
+ * plus suggestions from past shares when adding new ones, and (for admins) forgetting
+ * someone across every share.
  */
 class ShareRecipientsController extends Controller
 {
@@ -131,7 +133,8 @@ class ShareRecipientsController extends Controller
     }
 
     $query = trim((string) $request->query('q', ''));
-    if ($query === '') {
+    $enabled = filter_var(Setting::where('key', 'recipient_suggestions_enabled')->value('value') ?? true, FILTER_VALIDATE_BOOLEAN);
+    if ($query === '' || !$enabled) {
       return response()->json([
         'status' => 'success',
         'message' => 'Recipient suggestions',
@@ -159,6 +162,30 @@ class ShareRecipientsController extends Controller
       'status' => 'success',
       'message' => 'Recipient suggestions',
       'data' => ['recipients' => $recipients]
+    ]);
+  }
+
+  /**
+   * Admin only: remove one email address from the recipients of every share, for a request
+   * to be forgotten. Emails already sent can't be recalled.
+   */
+  public function forget(Request $request)
+  {
+    $validator = Validator::make($request->all(), [
+      'email' => ['required', 'email', 'max:255'],
+    ]);
+    if ($validator->fails()) {
+      return $this->validationError($validator);
+    }
+
+    $removed = ShareRecipient::whereRaw('LOWER(email) = ?', [strtolower($request->email)])->delete();
+
+    return response()->json([
+      'status' => 'success',
+      'message' => 'Recipient forgotten',
+      'data' => [
+        'removed' => $removed
+      ]
     ]);
   }
 

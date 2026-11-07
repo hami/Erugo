@@ -30,7 +30,8 @@ import {
   getBackups,
   createBackup,
   downloadBackup,
-  deleteBackup
+  deleteBackup,
+  forgetRecipient
 } from '../../api'
 import HelpTip from '../helpTip.vue'
 import { LOCKED_HIDEABLE } from '../../domData'
@@ -64,6 +65,8 @@ const settings = ref({
   share_url_mode: 'haiku',
   share_url_pattern: '******',
   remember_recipients_default: true,
+  recipient_suggestions_enabled: true,
+  password_in_email_allowed: true,
   locked_hidden_default_files: false,
   locked_hidden_default_stats: false,
   locked_hidden_default_message: false,
@@ -256,6 +259,31 @@ onMounted(async () => {
   await loadBackups()
   onLocalhost.value = window.location.hostname === 'localhost'
 })
+
+// Remove one email address from the recipients of every share (a request to be forgotten)
+const forgetEmail = ref('')
+const handleForgetRecipient = async () => {
+  const email = forgetEmail.value.trim()
+  if (!email) {
+    return
+  }
+  const confirmed = await confirmDialog.show({
+    title: t.value('settings.system.forget_recipient'),
+    message: t.value('settings.system.forget_recipient_confirm', { email }),
+    okText: t.value('settings.system.forget_recipient_button'),
+    cancelText: t.value('settings.close')
+  })
+  if (!confirmed) {
+    return
+  }
+  try {
+    const removed = await forgetRecipient(email)
+    toast.success(t.value('settings.system.forget_recipient_done', { email, value: removed }))
+    forgetEmail.value = ''
+  } catch (error) {
+    toast.error(error.message)
+  }
+}
 
 const loadSettings = async () => {
   try {
@@ -684,6 +712,33 @@ const handleDeleteAuthProvider = async (id) => {
                     <label for="remember_recipients_default">{{ $t('settings.system.remember_recipients_default') }}</label>
                   </div>
                 </div>
+                <div class="setting-group-body-item">
+                  <div class="checkbox-container">
+                    <input type="checkbox" id="recipient_suggestions_enabled" v-model="settings.recipient_suggestions_enabled" />
+                    <label for="recipient_suggestions_enabled">{{ $t('settings.system.recipient_suggestions_enabled') }}</label>
+                  </div>
+                </div>
+                <div class="setting-group-body-item">
+                  <div class="checkbox-container">
+                    <input type="checkbox" id="password_in_email_allowed" v-model="settings.password_in_email_allowed" />
+                    <label for="password_in_email_allowed">{{ $t('settings.system.password_in_email_allowed') }}</label>
+                  </div>
+                </div>
+                <div class="setting-group-body-item forget-recipient">
+                  <label for="forget_recipient_email">{{ $t('settings.system.forget_recipient') }}</label>
+                  <div class="forget-recipient-row">
+                    <input
+                      type="email"
+                      id="forget_recipient_email"
+                      v-model="forgetEmail"
+                      :placeholder="$t('settings.users.email')"
+                      @keyup.enter="handleForgetRecipient"
+                    />
+                    <button class="secondary" :disabled="!forgetEmail" @click="handleForgetRecipient">
+                      {{ $t('settings.system.forget_recipient_button') }}
+                    </button>
+                  </div>
+                </div>
                 <h6 id="locked_hidden_defaults" class="mt-3 mb-3">{{ $t('settings.system.locked_hidden_defaults') }}</h6>
                 <div class="setting-group-body-item">
                   <div class="checkbox-container" v-for="detail in LOCKED_HIDEABLE" :key="detail">
@@ -756,6 +811,12 @@ const handleDeleteAuthProvider = async (id) => {
               <p>{{ $t('settings.system.clean_files_after_description') }}</p>
               <h6>{{ $t('settings.system.remember_recipients_default') }}</h6>
               <p>{{ $t('settings.system.remember_recipients_default_description') }}</p>
+              <h6>{{ $t('settings.system.recipient_suggestions_enabled') }}</h6>
+              <p>{{ $t('settings.system.recipient_suggestions_enabled_description') }}</p>
+              <h6>{{ $t('settings.system.password_in_email_allowed') }}</h6>
+              <p>{{ $t('settings.system.password_in_email_allowed_description') }}</p>
+              <h6>{{ $t('settings.system.forget_recipient') }}</h6>
+              <p>{{ $t('settings.system.forget_recipient_description') }}</p>
               <h6>{{ $t('settings.system.locked_hidden_defaults') }}</h6>
               <p>{{ $t('settings.system.locked_hidden_defaults_description') }}</p>
               <h6>{{ $t('settings.system.allow_reverse_shares') }}</h6>
@@ -1623,6 +1684,19 @@ const handleDeleteAuthProvider = async (id) => {
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+.forget-recipient-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  input {
+    flex: 1;
+    min-width: 0;
+  }
+  button {
+    flex-shrink: 0;
   }
 }
 </style>
