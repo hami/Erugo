@@ -894,6 +894,39 @@ class SharesController extends Controller
     return true;
   }
 
+  /**
+   * Delete a share's files now rather than waiting for the cleanup after it expires.
+   * Admins can delete any share; owners their own, unless the system turns that off.
+   */
+  public function destroy($shareId)
+  {
+    $user = Auth::user();
+    $share = Share::find($shareId);
+    if (!$share) {
+      return response()->json(['status' => 'error', 'message' => 'Share not found'], 404);
+    }
+    if (!$share->canBeDeletedBy($user)) {
+      return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+    }
+    if ($share->status === 'deleted') {
+      return response()->json(['status' => 'error', 'message' => 'Share already deleted'], 409);
+    }
+
+    if (!$share->expires_at || $share->expires_at->isFuture()) {
+      $share->expires_at = Carbon::now();
+      $share->save();
+    }
+    if (!$share->cleanFiles(true)) {
+      return response()->json(['status' => 'error', 'message' => 'Failed to delete share'], 500);
+    }
+
+    return response()->json([
+      'status' => 'success',
+      'message' => 'Share deleted',
+      'data' => ['share' => $share->fresh()]
+    ]);
+  }
+
   public function pruneExpiredShares()
   {
     $user = Auth::user();

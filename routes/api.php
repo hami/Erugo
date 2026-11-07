@@ -148,6 +148,9 @@ Route::group([], function ($router) {
         Route::delete('/{id}/recipients/{recipientId}', [ShareRecipientsController::class, 'destroy'])->name('shares.recipients.destroy');
         Route::post('/{id}/recipients/{recipientId}/resend', [ShareRecipientsController::class, 'resend'])->name('shares.recipients.resend');
 
+        //delete a share and its files now
+        Route::delete('/{id}', [SharesController::class, 'destroy'])->name('shares.destroy');
+
         //prune expired shares
         Route::post('/prune-expired', [SharesController::class, 'pruneExpiredShares'])->name('shares.pruneExpired');
     });

@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, inject, defineExpose, computed } from 'vue'
-import { getAllShares, expireShare, extendShare, setDownloadLimit } from '../../api'
+import { getAllShares, expireShare, deleteShare, extendShare, setDownloadLimit } from '../../api'
 import {
   SquareArrowOutUpRight,
   CalendarPlus,
@@ -13,7 +13,8 @@ import {
   Pencil,
   Users,
   Link2,
-  KeyRound
+  KeyRound,
+  Trash2
 } from 'lucide-vue-next'
 import { useToast } from 'vue-toastification'
 import { niceFileSize, niceDate, niceFileName, niceNumber } from '../../utils'
@@ -53,6 +54,19 @@ const handleExpireShareClick = async (share) => {
     .catch((error) => {
       toast.error(t.value('settings.error.shareExpired'))
     })
+}
+
+const handleDeleteShareClick = async (share) => {
+  if (!confirm(t.value('settings.confirm.deleteShare', { name: share.name }))) {
+    return
+  }
+  try {
+    await deleteShare(share.id)
+    toast.success(t.value('settings.success.shareDeleted'))
+    loadShares()
+  } catch (error) {
+    toast.error(t.value('settings.error.shareDeleted'))
+  }
 }
 
 const handleExtendShareClick = async (share) => {
@@ -294,6 +308,14 @@ defineExpose({
                 :disabled="!enableDownloadButton(share)"
               >
                 <HardDriveDownload />
+              </button>
+              <button
+                class="secondary icon-only delete-share-button"
+                :title="$t('share.button.delete')"
+                :disabled="share.deleted"
+                @click="handleDeleteShareClick(share)"
+              >
+                <Trash2 />
               </button>
             </div>
             <div class="date-buttons">
