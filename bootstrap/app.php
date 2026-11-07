@@ -15,6 +15,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->encryptCookies(except: [
             'refresh_token',
         ]);
+
+        // Behind a reverse proxy, list it in TRUSTED_PROXIES ("*" or comma-separated IPs/ranges)
+        // so Erugo sees https and visitors' real addresses
+        if ($proxies = env('TRUSTED_PROXIES')) {
+            $middleware->trustProxies(at: $proxies === '*' ? '*' : array_map('trim', explode(',', $proxies)));
+        }
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
