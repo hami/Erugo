@@ -8,6 +8,7 @@ use App\Http\Middleware\AdminMiddleware as Admin;
 use App\Http\Middleware\NoUsersMiddleware as NoUsers;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\SharesController;
+use App\Http\Controllers\ShareRecipientsController;
 use App\Http\Controllers\BackgroundsController;
 use App\Services\SettingsService;
 use App\Http\Controllers\ThemesController;
@@ -129,6 +130,18 @@ Route::group([], function ($router) {
 
         //set download limit
         Route::post('/{id}/set-download-limit', [SharesController::class, 'setDownloadLimit'])->name('shares.setDownloadLimit');
+
+        //edit a share (name, hidden details, remove password)
+        Route::put('/{id}', [SharesController::class, 'update'])->name('shares.update');
+
+        //give a share a new link and/or password, optionally telling chosen recipients
+        Route::post('/{id}/change-access', [SharesController::class, 'changeAccess'])->name('shares.changeAccess');
+
+        //a share's recipients
+        Route::post('/{id}/recipients', [ShareRecipientsController::class, 'store'])->name('shares.recipients.store');
+        Route::put('/{id}/recipients/{recipientId}', [ShareRecipientsController::class, 'update'])->name('shares.recipients.update');
+        Route::delete('/{id}/recipients/{recipientId}', [ShareRecipientsController::class, 'destroy'])->name('shares.recipients.destroy');
+        Route::post('/{id}/recipients/{recipientId}/resend', [ShareRecipientsController::class, 'resend'])->name('shares.recipients.resend');
 
         //prune expired shares
         Route::post('/prune-expired', [SharesController::class, 'pruneExpiredShares'])->name('shares.pruneExpired');

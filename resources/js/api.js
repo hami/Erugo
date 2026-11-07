@@ -961,6 +961,68 @@ export const setDownloadLimit = async (id, amount) => {
   return data.data.share
 }
 
+export const updateShare = async (id, changes) => {
+  const response = await fetchWithAuth(`${apiUrl}/api/shares/${id}`, {
+    method: 'PUT',
+    headers: {
+      ...addJsonHeader()
+    },
+    body: JSON.stringify(changes)
+  })
+  const data = await response.json()
+  if (!response.ok) {
+    const error = new Error(data.message)
+    error.errors = data.data?.errors
+    throw error
+  }
+  return data.data.share
+}
+
+// Give a share a new link and/or password: { new_link, password, password_confirmation, notify, include_password }
+export const changeShareAccess = async (id, changes) => {
+  const response = await fetchWithAuth(`${apiUrl}/api/shares/${id}/change-access`, {
+    method: 'POST',
+    headers: {
+      ...addJsonHeader()
+    },
+    body: JSON.stringify(changes)
+  })
+  const data = await response.json()
+  if (!response.ok) {
+    throw new Error(data.message)
+  }
+  return data.data
+}
+
+const shareRecipientRequest = async (url, method, body = null) => {
+  const response = await fetchWithAuth(url, {
+    method,
+    headers: {
+      ...addJsonHeader()
+    },
+    body: body ? JSON.stringify(body) : undefined
+  })
+  const data = await response.json()
+  if (!response.ok) {
+    const error = new Error(data.message)
+    error.errors = data.data?.errors
+    throw error
+  }
+  return data.data
+}
+
+export const addShareRecipient = async (shareId, recipient, send = false) =>
+  shareRecipientRequest(`${apiUrl}/api/shares/${shareId}/recipients`, 'POST', { ...recipient, send })
+
+export const updateShareRecipient = async (shareId, recipientId, changes) =>
+  shareRecipientRequest(`${apiUrl}/api/shares/${shareId}/recipients/${recipientId}`, 'PUT', changes)
+
+export const deleteShareRecipient = async (shareId, recipientId) =>
+  shareRecipientRequest(`${apiUrl}/api/shares/${shareId}/recipients/${recipientId}`, 'DELETE')
+
+export const resendShareRecipient = async (shareId, recipientId) =>
+  shareRecipientRequest(`${apiUrl}/api/shares/${shareId}/recipients/${recipientId}/resend`, 'POST')
+
 export const pruneExpiredShares = async () => {
   const response = await fetchWithAuth(`${apiUrl}/api/shares/prune-expired`, {
     method: 'POST',

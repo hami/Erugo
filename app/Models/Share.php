@@ -69,6 +69,20 @@ class Share extends Model
   }
 
   /**
+   * Admins can manage any share; otherwise its owner, or whoever created the reverse-share invite it came from.
+   */
+  public function canBeManagedBy($user): bool
+  {
+    if ($user->admin) {
+      return true;
+    }
+    if ($this->user_id == $user->id) {
+      return true;
+    }
+    return $this->invite && $this->invite->user_id == $user->id;
+  }
+
+  /**
    * The details new shares hide while locked, from the locked_hidden_default_* settings.
    */
   public static function defaultLockedHidden(): array
@@ -79,6 +93,11 @@ class Share extends Model
     return array_values(array_filter(self::LOCKED_HIDEABLE, function ($detail) use ($settings) {
       return filter_var($settings['locked_hidden_default_' . $detail] ?? false, FILTER_VALIDATE_BOOLEAN);
     }));
+  }
+
+  public function recipients()
+  {
+    return $this->hasMany(ShareRecipient::class);
   }
 
   public function invite()

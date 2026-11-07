@@ -9,11 +9,16 @@ import {
   MessageCircleQuestion,
   Rocket,
   Lock,
-  LockOpen
+  LockOpen,
+  Pencil,
+  Users,
+  Link2,
+  KeyRound
 } from 'lucide-vue-next'
 import { useToast } from 'vue-toastification'
 import { niceFileSize, niceDate, niceFileName, niceNumber } from '../../utils'
 import HelpTip from '../helpTip.vue'
+import ShareManager from './shareManager.vue'
 import { useTranslate } from '@tolgee/vue'
 
 const { t } = useTranslate()
@@ -80,6 +85,24 @@ const handleDownloadLimitChange = async (share) => {
     .catch((error) => {
       toast.error('Failed to change download limit')
     })
+}
+
+// The share open in the Manage dialog, and where to open it
+const managedShare = ref(null)
+const manageSection = ref('details')
+const manageAccessMode = ref('link')
+
+const manageShare = (share, section, accessMode = 'link') => {
+  manageSection.value = section
+  manageAccessMode.value = accessMode
+  managedShare.value = share
+}
+
+const handleManageClose = (changed) => {
+  managedShare.value = null
+  if (changed) {
+    loadShares()
+  }
 }
 
 const downloadShare = async (share) => {
@@ -230,30 +253,67 @@ defineExpose({
             </div>
           </td>
           <td width="1" style="white-space: nowrap">
-            <button
-              @click="handleExpireShareClick(share)"
-              class="clear-button"
-              :disabled="!enableExpireShareButton(share)"
-            >
-              <CalendarX2 />
-              {{ $t('share.button.expireNow') }}
-            </button>
-            <button
-              @click="handleExtendShareClick(share)"
-              class="secondary"
-              :disabled="!enableExtendShareButton(share)"
-            >
-              <CalendarPlus />
-              {{ $t('share.button.extend') }}
-            </button>
-            <button
-              @click="downloadShare(share)"
-              class="secondary icon-only"
-              title="Download all files"
-              :disabled="!enableDownloadButton(share)"
-            >
-              <HardDriveDownload style="margin-right: 0" />
-            </button>
+            <div class="manage-buttons">
+              <button
+                class="secondary icon-only recipients-button"
+                :title="$t('settings.share.manage.recipients_title')"
+                :disabled="share.deleted"
+                @click="manageShare(share, 'recipients')"
+              >
+                <Users />
+                <span class="count" v-if="share.recipients && share.recipients.length">{{ share.recipients.length }}</span>
+              </button>
+              <button
+                class="secondary icon-only"
+                :title="$t('settings.share.access.mode_link')"
+                :disabled="share.deleted"
+                @click="manageShare(share, 'access', 'link')"
+              >
+                <Link2 />
+              </button>
+              <button
+                class="secondary icon-only"
+                :title="$t('settings.share.access.mode_password')"
+                :disabled="share.deleted"
+                @click="manageShare(share, 'access', 'password')"
+              >
+                <KeyRound />
+              </button>
+              <button
+                class="secondary icon-only"
+                :title="$t('settings.share.manage.details_title')"
+                :disabled="share.deleted"
+                @click="manageShare(share, 'details')"
+              >
+                <Pencil />
+              </button>
+              <button
+                @click="downloadShare(share)"
+                class="secondary icon-only"
+                title="Download all files"
+                :disabled="!enableDownloadButton(share)"
+              >
+                <HardDriveDownload />
+              </button>
+            </div>
+            <div class="date-buttons">
+              <button
+                @click="handleExpireShareClick(share)"
+                class="clear-button"
+                :disabled="!enableExpireShareButton(share)"
+              >
+                <CalendarX2 />
+                {{ $t('share.button.expireNow') }}
+              </button>
+              <button
+                @click="handleExtendShareClick(share)"
+                class="secondary"
+                :disabled="!enableExtendShareButton(share)"
+              >
+                <CalendarPlus />
+                {{ $t('share.button.extend') }}
+              </button>
+            </div>
           </td>
         </tr>
       </tbody>
@@ -265,10 +325,52 @@ defineExpose({
     <div v-else class="center-message">
       <p>{{ $t('settings.loading') }}</p>
     </div>
+    <ShareManager
+      :share="managedShare"
+      :section="manageSection"
+      :access-mode="manageAccessMode"
+      @close="handleManageClose"
+    />
   </div>
 </template>
 
 <style lang="scss" scoped>
+.manage-buttons,
+.date-buttons {
+  display: flex;
+  gap: 5px;
+}
+
+// Expire Now and Extend share the row's width evenly
+.date-buttons button {
+  flex: 1;
+  margin: 0;
+}
+
+.manage-buttons {
+  margin-bottom: 5px;
+  button {
+    flex: 1;
+  }
+  .recipients-button {
+    position: relative;
+    .count {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      min-width: 16px;
+      height: 16px;
+      padding: 0 4px;
+      border-radius: 8px;
+      font-size: 0.65rem;
+      line-height: 16px;
+      text-align: center;
+      background: var(--primary-button-background-color);
+      color: var(--primary-button-text-color);
+    }
+  }
+}
+
 .owner-info {
   display: flex;
   flex-direction: column;

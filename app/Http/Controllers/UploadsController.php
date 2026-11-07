@@ -426,6 +426,12 @@ class UploadsController extends Controller
     if ($request->has('recipients') && is_array($request->recipients)) {
       foreach ($request->recipients as $recipient) {
         if (is_array($recipient) && isset($recipient['name']) && isset($recipient['email'])) {
+          // Remember who was sent the link, so they can be told if it changes
+          $share->recipients()->create([
+            'name' => $recipient['name'],
+            'email' => $recipient['email'],
+            'notified_at' => now()
+          ]);
           $this->sendShareCreatedEmail($share, $recipient);
         }
       }

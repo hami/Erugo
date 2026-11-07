@@ -1,0 +1,21 @@
+{% extends 'emails/layout' %}
+
+{% block header %} Access to your files has changed
+{% endblock %}
+
+{% block content %}
+<h2>Hi {{ recipient_name }},</h2>
+
+<p>{{ sender_name }} has changed the {{ link_changed and password_changed ? 'link and password' : (link_changed ? 'link' : 'password') }} for the {{ share.file_count }} file{{ share.file_count == 1 ? '' : 's' }} they shared with you.{% if link_changed %} The old link no longer works.{% endif %}</p>
+{% if new_password %}
+<p>The new password is: <strong>{{ new_password }}</strong></p>
+{% elseif password_changed %}
+<p>{{ sender_name }} will let you know the new password.</p>
+{% endif %}
+<p>Click the button below to access your files.</p>
+{% endblock %}
+
+{% block action_url %}{{ settings.application_url }}/shares/{{ share.long_id }}{% endblock %}
+{% block action_text %}
+	Download Files
+{% endblock %}

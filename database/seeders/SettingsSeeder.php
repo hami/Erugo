@@ -484,6 +484,14 @@ class SettingsSeeder extends Seeder
                 'group' => 'system.shares',
                 'created_at' => now(),
                 'updated_at' => now()
+            ],
+            [
+                'key' => 'email_subject_shareAccessChangedMail.twig',
+                'value' => 'Access to your files has changed',
+                'previous_value' => null,
+                'group' => 'system.emails.subjects',
+                'created_at' => now(),
+                'updated_at' => now()
             ]
 
         ]);

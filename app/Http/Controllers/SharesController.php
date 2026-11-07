@@ -16,7 +16,10 @@ use App\Services\SettingsService;
 use App\Services\PatternGenerator;
 use App\Jobs\cleanSpecificShares;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\RateLimiter;
+use App\Mail\shareAccessChangedMail;
 
 class SharesController extends Controller
 {
@@ -240,22 +243,7 @@ class SharesController extends Controller
    */
   private function canManageShare(Share $share, $user): bool
   {
-    // Admins can manage any share
-    if ($user->admin) {
-      return true;
-    }
-
-    // User is the owner of the share
-    if ($share->user_id == $user->id) {
-      return true;
-    }
-
-    // User created the invite that resulted in this share
-    if ($share->invite && $share->invite->user_id == $user->id) {
-      return true;
-    }
-
-    return false;
+    return $share->canBeManagedBy($user);
   }
 
   private function checkShareAccess(Share $share)
@@ -522,7 +510,7 @@ class SharesController extends Controller
         ->orWhereHas('invite', function ($q) use ($user) {
           $q->where('user_id', $user->id);
         });
-    })->orderBy('created_at', 'desc')->with(['files', 'invite']);
+    })->orderBy('created_at', 'desc')->with(['files', 'invite', 'recipients']);
     if ($showDeleted === 'false') {
       $shares = $shares->where('status', '!=', 'deleted');
     }
@@ -555,7 +543,7 @@ class SharesController extends Controller
     $showDeleted = $request->input('show_deleted', false);
     $userId = $request->input('user_id', null);
 
-    $shares = Share::orderBy('created_at', 'desc')->with(['files', 'user', 'invite.user']);
+    $shares = Share::orderBy('created_at', 'desc')->with(['files', 'user', 'invite.user', 'recipients']);
     
     if ($showDeleted === 'false') {
       $shares = $shares->where('status', '!=', 'deleted');
@@ -690,6 +678,218 @@ class SharesController extends Controller
         'share' => $share
       ]
     ]);
+  }
+
+  /**
+   * Edit a share after it has been created: its name, what it hides while locked, or
+   * remove its password. Setting or changing a password goes through changeAccess().
+   */
+  public function update($shareId, Request $request)
+  {
+    $user = Auth::user();
+    if (!$user) {
+      return response()->json([
+        'status' => 'error',
+        'message' => 'Unauthorized'
+      ], 401);
+    }
+    $share = Share::where('id', $shareId)->first();
+    if (!$share) {
+      return response()->json([
+        'status' => 'error',
+        'message' => 'Share not found'
+      ], 404);
+    }
+    if (!$this->canManageShare($share, $user)) {
+      return response()->json([
+        'status' => 'error',
+        'message' => 'Unauthorized'
+      ], 401);
+    }
+
+    $validator = Validator::make($request->all(), [
+      'name' => ['sometimes', 'required', 'string', 'max:255'],
+      'remove_password' => ['sometimes', 'boolean'],
+      'locked_hidden' => ['sometimes', 'array'],
+      'locked_hidden.*' => ['string', Rule::in(Share::LOCKED_HIDEABLE)],
+    ]);
+
+    if ($validator->fails()) {
+      return response()->json([
+        'status' => 'error',
+        'message' => 'Validation failed',
+        'data' => [
+          'errors' => $validator->errors()
+        ]
+      ], 422);
+    }
+
+    if ($request->has('name')) {
+      $share->name = $request->name;
+    }
+
+    if ($request->has('locked_hidden')) {
+      $share->locked_hidden = array_values(array_unique($request->input('locked_hidden', [])));
+    }
+
+    if ($request->boolean('remove_password')) {
+      $share->password = null;
+    }
+
+    $share->save();
+
+    return response()->json([
+      'status' => 'success',
+      'message' => 'Share updated',
+      'data' => [
+        'share' => $this->formatSharePrivate($share->load(['files', 'recipients']))
+      ]
+    ]);
+  }
+
+  /**
+   * Change how a share is reached: give it a new link, a new password, or both,
+   * then optionally email chosen recipients about it.
+   *
+   * new_link: bool, password + password_confirmation: optional,
+   * notify: [recipient ids], include_password: bool (put the new password in the email)
+   */
+  public function changeAccess($shareId, Request $request)
+  {
+    $user = Auth::user();
+    if (!$user) {
+      return response()->json([
+        'status' => 'error',
+        'message' => 'Unauthorized'
+      ], 401);
+    }
+    $share = Share::where('id', $shareId)->with(['recipients', 'user'])->first();
+    if (!$share) {
+      return response()->json([
+        'status' => 'error',
+        'message' => 'Share not found'
+      ], 404);
+    }
+    if (!$this->canManageShare($share, $user)) {
+      return response()->json([
+        'status' => 'error',
+        'message' => 'Unauthorized'
+      ], 401);
+    }
+    if ($share->status == 'deleted') {
+      return response()->json([
+        'status' => 'error',
+        'message' => 'Share has been deleted'
+      ], 410);
+    }
+
+    $validator = Validator::make($request->all(), [
+      'new_link' => ['sometimes', 'boolean'],
+      'password' => ['nullable', 'string', 'confirmed'],
+      'notify' => ['sometimes', 'array'],
+      'notify.*' => ['integer'],
+      'include_password' => ['sometimes', 'boolean'],
+    ]);
+    if ($validator->fails()) {
+      return response()->json([
+        'status' => 'error',
+        'message' => 'Validation failed',
+        'data' => [
+          'errors' => $validator->errors()
+        ]
+      ], 422);
+    }
+
+    $newLink = $request->boolean('new_link');
+    $newPassword = $request->filled('password') ? $request->input('password') : null;
+    if (!$newLink && $newPassword === null) {
+      return response()->json([
+        'status' => 'error',
+        'message' => 'Nothing to change'
+      ], 422);
+    }
+
+    if ($newLink) {
+      // The zip job writes to a path built from the current long_id
+      if ($share->status == 'pending') {
+        return response()->json([
+          'status' => 'error',
+          'message' => 'Share is still being prepared'
+        ], 409);
+      }
+      if (!$this->moveToNewLink($share)) {
+        return response()->json([
+          'status' => 'error',
+          'message' => 'Failed to move share files'
+        ], 500);
+      }
+    }
+
+    if ($newPassword !== null) {
+      $share->password = Hash::make($newPassword);
+    }
+    $share->save();
+
+    $notifyIds = collect($request->input('notify', []))->map(fn($id) => (int) $id);
+    $includePassword = $newPassword !== null && $request->boolean('include_password');
+    $senderName = $share->user ? $share->user->name : $user->name;
+    $notified = [];
+    foreach ($share->recipients as $recipient) {
+      if ($notifyIds->contains($recipient->id)) {
+        sendEmail::dispatch($recipient->email, shareAccessChangedMail::class, [
+          'share' => $share,
+          'recipient' => ['name' => $recipient->name, 'email' => $recipient->email],
+          'senderName' => $senderName,
+          'linkChanged' => $newLink,
+          'passwordChanged' => $newPassword !== null,
+          'newPassword' => $includePassword ? $newPassword : null
+        ]);
+        $recipient->notified_at = now();
+        $recipient->save();
+        $notified[] = $recipient->id;
+      }
+    }
+
+    return response()->json([
+      'status' => 'success',
+      'message' => 'Share access changed',
+      'data' => [
+        'share' => $this->formatSharePrivate($share->load(['files', 'recipients'])),
+        'notified' => $notified
+      ]
+    ]);
+  }
+
+  /**
+   * Give a share a new long_id. Its files live at shares/<user folder>/<long_id>
+   * (a folder) and/or <long_id>.zip, so those move too; the old URL stops working.
+   */
+  private function moveToNewLink(Share $share): bool
+  {
+    $newLongId = $this->generateLongId();
+    $oldPath = $share->path;
+    $newPath = dirname($oldPath) . '/' . $newLongId;
+    $oldBase = storage_path('app/shares/' . $oldPath);
+    $newBase = storage_path('app/shares/' . $newPath);
+
+    $moved = [];
+    foreach (['', '.zip'] as $suffix) {
+      if (file_exists($oldBase . $suffix)) {
+        if (!rename($oldBase . $suffix, $newBase . $suffix)) {
+          // put back anything already moved
+          foreach ($moved as $done) {
+            rename($newBase . $done, $oldBase . $done);
+          }
+          \Log::error('Failed to move share files for new link', ['share_id' => $share->id]);
+          return false;
+        }
+        $moved[] = $suffix;
+      }
+    }
+
+    $share->long_id = $newLongId;
+    $share->path = $newPath;
+    return true;
   }
 
   public function pruneExpiredShares()
