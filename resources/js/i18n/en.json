@@ -547,7 +547,8 @@
     },
     "close": "Close",
     "confirm": {
-      "pruneExpiredShares": "Are you sure you want to delete your expired shares? This cannot be undone."
+      "pruneExpiredShares": "Are you sure you want to delete your expired shares? This cannot be undone.",
+      "deleteShare": "Delete \"{name}\" now? Its files are removed and the link stops working. This cannot be undone."
     },
     "description": {
       "about": "Information about your Erugo installation",
@@ -588,7 +589,8 @@
     "error": {
       "pruneExpiredShares": "Failed to schedule expired shares for deletion!",
       "shareExpired": "Failed to expire share",
-      "shareExtended": "Failed to extend share"
+      "shareExtended": "Failed to extend share",
+      "shareDeleted": "Failed to delete share"
     },
     "help": {
       "auth_provider": {
@@ -711,7 +713,8 @@
     "success": {
       "pruneExpiredShares": "Expired shares have been scheduled for deletion and will be processed in the background.",
       "shareExpired": "Share expired",
-      "shareExtended": "Share extended"
+      "shareExtended": "Share extended",
+      "shareDeleted": "Share deleted"
     },
     "system": {
       "allow_chunked_uploads": "Allow chunked upload mode",
@@ -873,7 +876,9 @@
       "smtp_username": "SMTP Username",
       "smtp_username_description": "The username required to authenticate with your SMTP server. This is typically the email address or account name associated with your email service.",
       "upload_modes": "Upload modes",
-      "your_auth_providers": "Your Auth Providers"
+      "your_auth_providers": "Your Auth Providers",
+      "owner_share_delete_enabled": "Let people delete their own shares",
+      "owner_share_delete_enabled_description": "Lets people delete a share's files straight away instead of waiting for the cleanup after it expires. Admins can always delete any share."
     },
     "system_auth_provider_info_link": "About {name}",
     "table": {
@@ -985,7 +990,8 @@
   "share": {
     "button": {
       "expireNow": "Expire Now",
-      "extend": "Extend"
+      "extend": "Extend",
+      "delete": "Delete share now"
     },
     "contains": {
       "count": "{value, plural, one {# file} other {{value} files}}"

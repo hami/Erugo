@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, inject, defineExpose } from 'vue'
-import { getMyShares, expireShare, extendShare, setDownloadLimit, pruneExpiredShares } from '../../api'
+import { getMyShares, expireShare, deleteShare, extendShare, setDownloadLimit, pruneExpiredShares } from '../../api'
 import {
   SquareArrowOutUpRight,
   CalendarPlus,
@@ -10,12 +10,15 @@ import {
   Rocket,
   Lock,
   LockOpen,
-  ArrowLeftRight
+  ArrowLeftRight,
+  Trash2
 } from 'lucide-vue-next'
 import { useToast } from 'vue-toastification'
 import { niceFileSize, niceDate, niceFileName, niceNumber } from '../../utils'
 import HelpTip from '../helpTip.vue'
 import { useTranslate } from '@tolgee/vue'
+import { store } from '../../store'
+import { domData } from '../../domData'
 
 const { t } = useTranslate()
 
@@ -47,6 +50,22 @@ const handleExpireShareClick = async (share) => {
     .catch((error) => {
       toast.error(t.value('settings.error.shareExpired'))
     })
+}
+
+// Admins can always delete; owners only while the system allows it
+const canDelete = store.isAdmin() || domData().owner_share_delete_enabled !== false
+
+const handleDeleteShareClick = async (share) => {
+  if (!confirm(t.value('settings.confirm.deleteShare', { name: share.name }))) {
+    return
+  }
+  try {
+    await deleteShare(share.id)
+    toast.success(t.value('settings.success.shareDeleted'))
+    loadShares()
+  } catch (error) {
+    toast.error(t.value('settings.error.shareDeleted'))
+  }
 }
 
 const handleExtendShareClick = async (share) => {
@@ -254,6 +273,15 @@ defineExpose({
               :disabled="!enableDownloadButton(share)"
             >
               <HardDriveDownload style="margin-right: 0" />
+            </button>
+            <button
+              class="secondary icon-only"
+              v-if="canDelete"
+              :title="$t('share.button.delete')"
+              :disabled="share.deleted"
+              @click="handleDeleteShareClick(share)"
+            >
+              <Trash2 style="margin-right: 0" />
             </button>
           </td>
         </tr>

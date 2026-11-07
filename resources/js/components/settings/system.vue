@@ -60,6 +60,7 @@ const settings = ref({
   max_share_size: '',
   max_share_size_unit: '',
   clean_files_after_days: '',
+  owner_share_delete_enabled: true,
   share_url_mode: 'haiku',
   share_url_pattern: '******',
   emails_share_downloaded_enabled: '',
@@ -671,6 +672,12 @@ const handleDeleteAuthProvider = async (id) => {
                     placeholder="30"
                   />
                 </div>
+                <div class="setting-group-body-item">
+                  <div class="checkbox-container">
+                    <input type="checkbox" id="owner_share_delete_enabled" v-model="settings.owner_share_delete_enabled" />
+                    <label for="owner_share_delete_enabled">{{ $t('settings.system.owner_share_delete_enabled') }}</label>
+                  </div>
+                </div>
                 <h6 id="reverse_shares" class="mt-3 mb-3">{{ $t('settings.system.reverse_shares') }}</h6>
                 <div class="setting-group-body-item">
                   <div class="checkbox-container">
@@ -728,6 +735,8 @@ const handleDeleteAuthProvider = async (id) => {
               <p>{{ $t('settings.system.max_share_size_description') }}</p>
               <h6>{{ $t('settings.system.clean_files_after') }}</h6>
               <p>{{ $t('settings.system.clean_files_after_description') }}</p>
+              <h6>{{ $t('settings.system.owner_share_delete_enabled') }}</h6>
+              <p>{{ $t('settings.system.owner_share_delete_enabled_description') }}</p>
               <h6>{{ $t('settings.system.allow_reverse_shares') }}</h6>
               <p>{{ $t('settings.system.allow_reverse_shares_description') }}</p>
               <h6>{{ $t('settings.system.share_url_mode') }}</h6>

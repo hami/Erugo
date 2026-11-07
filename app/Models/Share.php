@@ -152,4 +152,24 @@ class Share extends Model
       return false;
     }
   }
+
+  public static function ownersCanDelete(): bool
+  {
+    return filter_var(Setting::where('key', 'owner_share_delete_enabled')->value('value') ?? true, FILTER_VALIDATE_BOOLEAN);
+  }
+
+  /**
+   * Admins can delete any share; owners (and whoever invited a reverse share) their own,
+   * while the system allows it.
+   */
+  public function canBeDeletedBy($user): bool
+  {
+    if ($user->admin) {
+      return true;
+    }
+    if (!self::ownersCanDelete()) {
+      return false;
+    }
+    return $this->user_id == $user->id || ($this->invite && $this->invite->user_id == $user->id);
+  }
 }
