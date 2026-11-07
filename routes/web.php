@@ -131,6 +131,32 @@ Route::get('/auth/provider/{provider}/login', [ExternalAuthController::class, 'p
 Route::get('/auth/provider/{provider}/callback', [ExternalAuthController::class, 'providerCallback'])
     ->name('social.provider.callback');
 
+// Some providers (Sign in with Apple) post the callback back cross-site. The session cookie
+// isn't sent with that POST, nor with a redirect straight on from it, so answer with a page
+// that moves itself on: the browser then treats the GET as same-site and sends the session
+// (state check, account linking) along.
+Route::post('/auth/provider/{provider}/callback', function ($provider) {
+    $query = array_filter(request()->only(['code', 'state', 'user', 'error']), fn($value) => $value !== null);
+    $path = parse_url(route('social.provider.callback', ['provider' => $provider]), PHP_URL_PATH);
+    $url = e($path . '?' . http_build_query($query));
+
+    return response(
+        '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="referrer" content="no-referrer">'
+        . '<meta http-equiv="refresh" content="0;url=' . $url . '"><title>Signing in…</title></head>'
+        . '<body><p><a href="' . $url . '">Continue</a></p></body></html>',
+        200,
+        ['Content-Type' => 'text/html; charset=utf-8', 'Cache-Control' => 'no-store']
+    );
+})->withoutMiddleware([
+    // Apple posts cross-site, so the browser sends no session cookie here.
+    // Starting a session would overwrite the real one and lose the link state.
+    \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
+    \Illuminate\Session\Middleware\StartSession::class,
+    \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+    \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+])
+    ->name('social.provider.callback.post');
+
 //auth provider link account
 Route::get('/auth/provider/{provider}/link', [ExternalAuthController::class, 'linkAccount'])
     ->name('social.provider.link');

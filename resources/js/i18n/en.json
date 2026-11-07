@@ -873,7 +873,10 @@
       "smtp_username": "SMTP Username",
       "smtp_username_description": "The username required to authenticate with your SMTP server. This is typically the email address or account name associated with your email service.",
       "upload_modes": "Upload modes",
-      "your_auth_providers": "Your Auth Providers"
+      "your_auth_providers": "Your Auth Providers",
+      "auth_provider_config_team_id": "Team ID",
+      "auth_provider_config_key_id": "Key ID",
+      "auth_provider_config_private_key": "Private key (.p8 contents)"
     },
     "system_auth_provider_info_link": "About {name}",
     "table": {
