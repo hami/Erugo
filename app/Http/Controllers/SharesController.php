@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Share;
 use Carbon\Carbon;
@@ -188,20 +189,31 @@ class SharesController extends Controller
       return redirect()->to('/shares/' . $shareId);
     }
 
+    return $this->serveShareFiles($share);
+  }
+
+  /**
+   * Send a share's files: the single file, or the zip once it's ready.
+   * Downloads by recipients are recorded; an admin's download isn't.
+   */
+  private function serveShareFiles(Share $share, bool $record = true)
+  {
     $sharePath = storage_path('app/shares/' . $share->path);
 
     //if there is only one file, download it directly
     if ($share->file_count == 1) {
       if (file_exists($sharePath . '/' . $share->files[0]->name)) {
 
-        $this->createDownloadRecord($share);
+        if ($record) {
+          $this->createDownloadRecord($share);
+        }
 
         return response()->download(
           $sharePath . '/' . $share->files[0]->name,
           $this->sanitizeDownloadFilename($share->files[0]->display_name)
         );
       } else {
-        return redirect()->to('/shares/' . $shareId);
+        return redirect()->to('/shares/' . $share->long_id);
       }
     }
 
@@ -219,7 +231,9 @@ class SharesController extends Controller
       \Log::info('looking for: ' . $filename);
       //does the file exist?
       if (file_exists($filename)) {
-        $this->createDownloadRecord($share);
+        if ($record) {
+          $this->createDownloadRecord($share);
+        }
 
         return response()->download(
           $filename,
@@ -247,6 +261,43 @@ class SharesController extends Controller
       'share' => $share,
       'settings' => $this->getSettings()
     ]);
+  }
+
+  /**
+   * A short-lived link an admin can use to download any share that still has its files,
+   * even once it has expired, run out of downloads or is password protected.
+   */
+  public function adminDownloadLink($shareId)
+  {
+    if (!self::adminsCanDownloadExpired()) {
+      return response()->json(['status' => 'error', 'message' => 'Admin downloads are turned off'], 403);
+    }
+    $share = Share::find($shareId);
+    if (!$share) {
+      return response()->json(['status' => 'error', 'message' => 'Share not found'], 404);
+    }
+    if ($share->status === 'deleted') {
+      return response()->json(['status' => 'error', 'message' => 'Share deleted'], 410);
+    }
+
+    // relative, so the signature holds whatever scheme the proxies in front report
+    $url = URL::temporarySignedRoute('shares.adminDownload', now()->addMinutes(5), ['id' => $share->id], false);
+
+    return response()->json(['status' => 'success', 'data' => ['url' => $url]]);
+  }
+
+  public function adminDownload($shareId)
+  {
+    $share = Share::with('files')->find($shareId);
+    if (!self::adminsCanDownloadExpired() || !$share || $share->status === 'deleted') {
+      abort(404);
+    }
+    return $this->serveShareFiles($share, false);
+  }
+
+  public static function adminsCanDownloadExpired(): bool
+  {
+    return filter_var(Setting::where('key', 'admin_download_expired_enabled')->value('value') ?? true, FILTER_VALIDATE_BOOLEAN);
   }
 
   /**

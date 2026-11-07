@@ -138,6 +138,9 @@ Route::group([], function ($router) {
     Route::group(['prefix' => 'shares', 'middleware' => ['auth', Admin::class]], function ($router) {
         //get all shares (admin only)
         Route::get('/all', [SharesController::class, 'allShares'])->name('shares.allShares');
+
+        //short-lived link to download any share that still has its files, even expired (admin only)
+        Route::post('/{id}/admin-download-link', [SharesController::class, 'adminDownloadLink'])->name('shares.adminDownloadLink');
     });
 
     //manage themes [auth, admin]
@@ -198,6 +201,11 @@ Route::group([], function ($router) {
     //download shares [public]
     Route::any('/shares/{share}/download', [SharesController::class, 'download'])->name('shares.download');
     
+    //an admin's download, reached only through a signed link from admin-download-link
+    Route::get('/shares/{id}/admin-download', [SharesController::class, 'adminDownload'])
+        ->middleware('signed:relative')
+        ->name('shares.adminDownload');
+
     //download specific file from share [public] - filepath can include nested directories
     Route::get('/shares/{share}/download/file/{filepath}', [SharesController::class, 'downloadFile'])
         ->where('filepath', '.*')
