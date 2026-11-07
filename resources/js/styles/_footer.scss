@@ -27,9 +27,9 @@ footer {
 }
 
 .powered-by {
-  // background: var(--panel-background-color);
+  background: var(--footer-background-color, transparent);
   text-align: center;
-  color: var(--panel-text-color);
+  color: var(--footer-text-color, var(--panel-text-color));
   padding: 10px 20px;
   font-size: 0.9rem;
   border-radius: var(--panel-border-radius);
@@ -39,10 +39,10 @@ footer {
   justify-content: center;
   gap: 5px;
   a {
-    color: var(--link-color);
+    color: var(--footer-link-color, var(--link-color));
     text-decoration: none;
     &:hover {
-      color: var(--link-color-hover);
+      color: var(--footer-link-color-hover, var(--link-color-hover));
     }
   }
 }
