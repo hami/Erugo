@@ -24,13 +24,22 @@ class Share extends Model
     'require_email',
     'expires_at',
     'status',
-    'password'
+    'password',
+    'locked_hidden'
   ];
 
   protected $casts = [
     'expires_at' => 'datetime',
     'deletes_at' => 'datetime',
+    'locked_hidden' => 'array',
   ];
+
+  /**
+   * Details a password-protected share can keep to itself until it is unlocked:
+   * the file list, its stats (file count and size), the sender's message and name,
+   * and the share's own name.
+   */
+  public const LOCKED_HIDEABLE = ['files', 'stats', 'message', 'sender', 'name'];
 
   protected $appends = [
     'expired',
@@ -41,6 +50,7 @@ class Share extends Model
   protected $hidden = [
     'path',
     'user_id',
+    'password',
   ];
 
   public function files()
@@ -56,6 +66,19 @@ class Share extends Model
   public function user()
   {
     return $this->belongsTo(User::class);
+  }
+
+  /**
+   * The details new shares hide while locked, from the locked_hidden_default_* settings.
+   */
+  public static function defaultLockedHidden(): array
+  {
+    $settings = Setting::whereIn('key', array_map(fn($d) => 'locked_hidden_default_' . $d, self::LOCKED_HIDEABLE))
+      ->pluck('value', 'key');
+
+    return array_values(array_filter(self::LOCKED_HIDEABLE, function ($detail) use ($settings) {
+      return filter_var($settings['locked_hidden_default_' . $detail] ?? false, FILTER_VALIDATE_BOOLEAN);
+    }));
   }
 
   public function invite()

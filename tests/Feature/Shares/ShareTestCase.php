@@ -83,4 +83,12 @@ abstract class ShareTestCase extends TestCase
 
     return $share;
   }
+
+  protected function lockedShare(User $owner, array $hidden = [], string $password = 'open-sesame'): Share
+  {
+    return $this->makeShare($owner, [
+      'password' => Hash::make($password),
+      'locked_hidden' => $hidden,
+    ]);
+  }
 }

@@ -24,3 +24,10 @@ const getSettings = () => {
   const settings = JSON.parse(body.getAttribute('data-settings'))
   return settings
 }
+// The details a password-protected share hides while locked, as the system defaults set them
+export const LOCKED_HIDEABLE = ['files', 'stats', 'message', 'sender', 'name']
+
+export const defaultLockedHidden = () => {
+  const data = domData()
+  return LOCKED_HIDEABLE.filter((detail) => data[`locked_hidden_default_${detail}`] === true)
+}

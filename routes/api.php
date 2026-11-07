@@ -195,6 +195,9 @@ Route::group([], function ($router) {
     //read shares [public]
     Route::get('/shares/{share}', [SharesController::class, 'read'])->name('shares.read');
 
+    //unlock a password-protected share [public]
+    Route::post('/shares/{share}/unlock', [SharesController::class, 'unlock'])->name('shares.unlock');
+
     //download shares [public]
     Route::any('/shares/{share}/download', [SharesController::class, 'download'])->name('shares.download');
     

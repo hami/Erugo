@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
 
 use App\Models\Share;
@@ -81,7 +82,9 @@ class UploadsController extends Controller
       'description' => ['max:500'],
       'uploadIds' => ['required', 'array'],
       'uploadIds.*' => ['required', 'string'],
-      'expiry_date' => ['required', 'date']
+      'expiry_date' => ['required', 'date'],
+      'locked_hidden' => ['sometimes', 'array'],
+      'locked_hidden.*' => ['string', Rule::in(Share::LOCKED_HIDEABLE)]
     ]);
 
     if ($validator->fails()) {
@@ -237,7 +240,10 @@ class UploadsController extends Controller
       'size' => $totalSize,
       'file_count' => $fileCount,
       'status' => 'pending',
-      'password' => $password ? Hash::make($password) : null
+      'password' => $password ? Hash::make($password) : null,
+      'locked_hidden' => $request->has('locked_hidden')
+        ? array_values(array_unique($request->input('locked_hidden', [])))
+        : Share::defaultLockedHidden()
     ]);
 
     // Create a mapping from upload_id to file for path lookup (for non-bundle uploads)

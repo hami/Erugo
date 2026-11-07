@@ -22,7 +22,8 @@ import { niceFileSize, niceFileType, simpleUUID } from '../utils'
 import { getHealth, getMyProfile, uploadFilesInChunks, logout } from '../api'
 import Recipient from './recipient.vue'
 import { uploadController } from '../store'
-import { domData } from '../domData'
+import { domData, defaultLockedHidden } from '../domData'
+import LockedHiddenOptions from './lockedHiddenOptions.vue'
 import { useTranslate } from '@tolgee/vue'
 import { useToast } from 'vue-toastification'
 import { store } from '../store'
@@ -98,6 +99,7 @@ const shareFormPasswordConfirm = ref('')
 
 const sharePassword = ref('')
 const sharePasswordConfirm = ref('')
+const shareLockedHidden = ref(defaultLockedHidden())
 
 const passwordFormErrors = ref({
   password: null,
@@ -480,6 +482,9 @@ const doTusUpload = async (uploadId) => {
         alert(`Upload failed: ${error.message}`)
         currentlyUploading.value = false
         resetUploadState()
+      },
+      {
+        lockedHidden: shareLockedHidden.value
       }
     )
   } catch (error) {
@@ -1065,6 +1070,8 @@ const filesByDirectory = computed(() => {
           {{ passwordFormErrors.passwordConfirm }}
         </div>
       </div>
+
+      <LockedHiddenOptions v-model="shareLockedHidden" id-prefix="share_locked_hidden" />
 
       <div class="button-bar">
         <button @click="setPassword">

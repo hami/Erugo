@@ -105,6 +105,17 @@ const bundleFilesIntoZip = async (files, onProgress) => {
   return { blob, manifest }
 }
 
+// Optional share settings sent when a share is created. Each is left out when not given,
+// so the server falls back to the system default.
+//   lockedHidden: details to hide until the password is entered (see LOCKED_HIDEABLE)
+const shareOptionsPayload = (options = {}) => {
+  const payload = {}
+  if (options.lockedHidden !== undefined) {
+    payload.locked_hidden = options.lockedHidden
+  }
+  return payload
+}
+
 /**
  * Upload files as a bundle (zipped together)
  * Used when there are many small files to avoid tusd hook overload
@@ -120,7 +131,8 @@ const uploadBundledFiles = async (
   passwordConfirm,
   onProgress,
   onComplete,
-  onError
+  onError,
+  options = {}
 ) => {
   try {
     // Phase 1: Bundle the files
@@ -217,6 +229,7 @@ const uploadBundledFiles = async (
         expiry_date: expiryDate,
         password: password,
         password_confirm: passwordConfirm,
+        ...shareOptionsPayload(options),
         isBundle: true
       })
     })
@@ -976,6 +989,25 @@ export const getShare = async (id) => {
   return data.data.share
 }
 
+export const unlockShare = async (id, password) => {
+  const response = await fetchWithAuth(`${apiUrl}/api/shares/${id}/unlock`, {
+    method: 'POST',
+    headers: {
+      ...addJsonHeader()
+    },
+    body: JSON.stringify({
+      password
+    })
+  })
+  const data = await response.json()
+  if (!response.ok) {
+    const error = new Error(data.message)
+    error.status = response.status
+    throw error
+  }
+  return data.data.share
+}
+
 // Theme Methods
 export const getThemes = async () => {
   const response = await fetchWithAuth(`${apiUrl}/api/themes`, {
@@ -1522,6 +1554,7 @@ const clearTusFingerprint = (uploadUrl) => {
  * @param {Function} onProgress - Progress callback function
  * @param {Function} onComplete - Complete callback function
  * @param {Function} onError - Error callback function
+ * @param {Object} options - Optional share settings: { lockedHidden } (see shareOptionsPayload)
  */
 export const uploadFilesInChunks = async (
   files,
@@ -1534,7 +1567,8 @@ export const uploadFilesInChunks = async (
   passwordConfirm,
   onProgress,
   onComplete,
-  onError
+  onError,
+  options = {}
 ) => {
   // Check if we should bundle the files (many small files)
   const useBundle = shouldBundleFiles(files)
@@ -1551,7 +1585,8 @@ export const uploadFilesInChunks = async (
       passwordConfirm,
       onProgress,
       onComplete,
-      onError
+      onError,
+      options
     )
   }
 
@@ -1684,7 +1719,8 @@ export const uploadFilesInChunks = async (
           filePaths: filePaths,
           expiry_date: expiryDate,
           password: password,
-          password_confirm: passwordConfirm
+          password_confirm: passwordConfirm,
+          ...shareOptionsPayload(options)
         })
       })
 

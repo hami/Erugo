@@ -33,6 +33,7 @@ import {
   deleteBackup
 } from '../../api'
 import HelpTip from '../helpTip.vue'
+import { LOCKED_HIDEABLE } from '../../domData'
 
 import { useToast } from 'vue-toastification'
 import { mapSettings } from '../../utils'
@@ -62,6 +63,11 @@ const settings = ref({
   clean_files_after_days: '',
   share_url_mode: 'haiku',
   share_url_pattern: '******',
+  locked_hidden_default_files: false,
+  locked_hidden_default_stats: false,
+  locked_hidden_default_message: false,
+  locked_hidden_default_sender: false,
+  locked_hidden_default_name: false,
   emails_share_downloaded_enabled: '',
   smtp_host: '',
   smtp_port: '',
@@ -671,6 +677,19 @@ const handleDeleteAuthProvider = async (id) => {
                     placeholder="30"
                   />
                 </div>
+                <h6 id="locked_hidden_defaults" class="mt-3 mb-3">{{ $t('settings.system.locked_hidden_defaults') }}</h6>
+                <div class="setting-group-body-item">
+                  <div class="checkbox-container" v-for="detail in LOCKED_HIDEABLE" :key="detail">
+                    <input
+                      type="checkbox"
+                      :id="`locked_hidden_default_${detail}`"
+                      v-model="settings[`locked_hidden_default_${detail}`]"
+                    />
+                    <label :for="`locked_hidden_default_${detail}`">
+                      {{ $t(`settings.share.locked_hidden.${detail}`) }}
+                    </label>
+                  </div>
+                </div>
                 <h6 id="reverse_shares" class="mt-3 mb-3">{{ $t('settings.system.reverse_shares') }}</h6>
                 <div class="setting-group-body-item">
                   <div class="checkbox-container">
@@ -728,6 +747,8 @@ const handleDeleteAuthProvider = async (id) => {
               <p>{{ $t('settings.system.max_share_size_description') }}</p>
               <h6>{{ $t('settings.system.clean_files_after') }}</h6>
               <p>{{ $t('settings.system.clean_files_after_description') }}</p>
+              <h6>{{ $t('settings.system.locked_hidden_defaults') }}</h6>
+              <p>{{ $t('settings.system.locked_hidden_defaults_description') }}</p>
               <h6>{{ $t('settings.system.allow_reverse_shares') }}</h6>
               <p>{{ $t('settings.system.allow_reverse_shares_description') }}</p>
               <h6>{{ $t('settings.system.share_url_mode') }}</h6>

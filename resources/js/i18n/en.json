@@ -409,7 +409,8 @@
   },
   "limit": "Limit",
   "message": {
-    "from": "Message from {name}"
+    "from": "Message from {name}",
+    "title": "Message"
   },
   "processing_uploaded_files": "Processing uploaded files",
   "reverse_invite_send": {
@@ -617,7 +618,25 @@
       "password": "Share password",
       "password_confirm": "Confirm share password",
       "password_protect_description": "Create a password for your share. Anyone downloading this share will need this password to access it. Please note: After creation, this password will be encrypted and we cannot retrieve it for you. Make sure to save it in a secure location.",
-      "remove_password": "Remove Password"
+      "remove_password": "Remove Password",
+      "locked_hidden": {
+        "label": "Hidden until unlocked",
+        "files": "The file list",
+        "stats": "The file count and total size",
+        "message": "The message to recipients",
+        "sender": "The sender's name",
+        "name": "The share's name",
+        "help": "The expiry date always shows.",
+        "summary_none": "Nothing",
+        "summary_all": "All",
+        "short": {
+          "files": "File list",
+          "stats": "Count & size",
+          "message": "Message",
+          "sender": "Sender",
+          "name": "Name"
+        }
+      }
     },
     "stats": {
       "downloads": {
@@ -873,7 +892,9 @@
       "smtp_username": "SMTP Username",
       "smtp_username_description": "The username required to authenticate with your SMTP server. This is typically the email address or account name associated with your email service.",
       "upload_modes": "Upload modes",
-      "your_auth_providers": "Your Auth Providers"
+      "your_auth_providers": "Your Auth Providers",
+      "locked_hidden_defaults": "Hidden on locked shares",
+      "locked_hidden_defaults_description": "What a password-protected share hides until the password is entered. These are the starting choices for new shares; they can be changed when a share is created or edited afterwards."
     },
     "system_auth_provider_info_link": "About {name}",
     "table": {
@@ -997,7 +1018,11 @@
     "download": {
       "invalid_password": "Share password is invalid",
       "password_required": "You must enter the password to download this share.",
-      "password_required_short": "Enter password"
+      "password_required_short": "Enter password",
+      "files_hidden": "Enter the password to see the files",
+      "unlock": "Unlock",
+      "too_many_attempts": "Too many wrong passwords. Try again in a few minutes.",
+      "locked_title": "Password-protected share"
     },
     "download_limit_reached": "Download Limit Reached",
     "download_limit_reached.message": "The share you are trying to download has reached its download limit. Please ask the share creator to increase the download limit.",

@@ -1,8 +1,8 @@
 <script setup>
-import { ref, onMounted, nextTick, computed } from 'vue'
+import { ref, onMounted, nextTick, computed, watch } from 'vue'
 import { niceFileSize, timeUntilExpiration, getApiUrl, niceFileType, niceFileName } from '../utils'
-import { FileIcon, HeartCrack, TrendingDown, FileX, Boxes } from 'lucide-vue-next'
-import { getShare } from '../api'
+import { FileIcon, HeartCrack, TrendingDown, FileX, Boxes, Lock } from 'lucide-vue-next'
+import { getShare, unlockShare } from '../api'
 import { domError } from '../domData'
 import { useToast } from 'vue-toastification'
 import { useTranslate } from '@tolgee/vue'
@@ -37,6 +37,8 @@ onMounted(() => {
         toast.error(t.value('share.download.password_required'))
       } else if (errorMessage == 'invalid_password') {
         toast.error(t.value('share.download.invalid_password'))
+      } else if (errorMessage == 'too_many_attempts') {
+        toast.error(t.value('share.download.too_many_attempts'))
       }
     }
   }, 100)
@@ -45,7 +47,6 @@ onMounted(() => {
 const fetchShare = async () => {
   try {
     share.value = await getShare(props.downloadShareCode)
-    document.title = share.value.name
   } catch (error) {
     console.log('error', error)
     if (error.message == 'Download limit reached') {
@@ -74,33 +75,48 @@ const splitFullName = (fullName) => {
 const password = ref('')
 const error = ref(null)
 
-const downloadPasswordProtectedFiles = () => {
-  //is the password filled in?
+// A protected share stays locked until its password is entered. The server then sets a
+// cookie that keeps it unlocked in this browser until the share expires, so downloads
+// (whole share or single files) need nothing more.
+const locked = computed(() => share.value && share.value.password_protected && !share.value.unlocked)
+
+const unlocking = ref(false)
+const unlock = async ({ thenDownload = false } = {}) => {
   if (!password.value) {
-    toast.error(t.value('share.download.password_required'))
     error.value = t.value('share.download.password_required_short')
     return
   }
-
-  //create a form and submit it
-  const form = document.createElement('form')
-  form.action = `${apiUrl}/api/shares/${props.downloadShareCode}/download`
-  form.method = 'POST'
-
-  //add the password input
-  const passwordInput = document.createElement('input')
-  passwordInput.type = 'password'
-  passwordInput.name = 'password'
-  passwordInput.value = password.value
-  form.appendChild(passwordInput)
-
-  // Add the form to the document body - THIS LINE IS CRUCIAL
-  document.body.appendChild(form)
-
-  // Submit the form
-  form.submit()
-  setTimeout(() => document.body.removeChild(form), 0)
+  error.value = null
+  unlocking.value = true
+  try {
+    share.value = await unlockShare(props.downloadShareCode, password.value)
+    password.value = ''
+    if (thenDownload) {
+      downloadFiles()
+    }
+  } catch (e) {
+    if (e.status == 429) {
+      error.value = t.value('share.download.too_many_attempts')
+    } else {
+      error.value = t.value('share.download.invalid_password')
+    }
+  } finally {
+    unlocking.value = false
+  }
 }
+
+// Details the share is keeping to itself until it is unlocked (see Share::LOCKED_HIDEABLE)
+const hides = (detail) => !!share.value?.hidden?.includes(detail)
+const hidesAnything = computed(() => (share.value?.hidden?.length ?? 0) > 0)
+
+watch(share, (value) => {
+  if (value) {
+    document.title = hides('name') ? t.value('share.download.locked_title') : value.name
+  }
+})
+
+// With nothing hidden, the one button unlocks and downloads in a single step
+const submitPassword = () => unlock({ thenDownload: !hidesAnything.value })
 
 const filesByDirectory = computed(() => {
   const files = share?.value?.files
@@ -155,10 +171,16 @@ const filesByDirectory = computed(() => {
   <div class="download-panel-content">
     <template v-if="share">
       <h1 class="share-name">
-        <Boxes />
-        {{ share.name }}
+        <template v-if="hides('name')">
+          <Lock />
+          {{ $t('share.download.locked_title') }}
+        </template>
+        <template v-else>
+          <Boxes />
+          {{ share.name }}
+        </template>
       </h1>
-      <div class="stats">
+      <div class="stats" v-if="!hides('stats')">
         <div class="total-size stat">{{ niceFileSize(share.size) }}</div>
         <div class="file-count stat">
           {{ $t('share.contains.count', 'Contains: {value} files', { value: share.file_count }) }}
@@ -173,21 +195,26 @@ const filesByDirectory = computed(() => {
           })
         }}
       </div>
-      <div class="share-files-list">
+      <div class="share-files-locked" v-if="hides('files')">
+        <Lock />
+        {{ $t('share.download.files_hidden') }}
+      </div>
+      <div class="share-files-list" v-else>
         <directory-item
           :structure="filesByDirectory"
           :is-root="true"
           :read-only="true"
-          :share-code="downloadShareCode"
+          :share-code="locked ? null : downloadShareCode"
         />
       </div>
       <div class="share-message mt-3" v-if="share.description">
-        <h6>{{ $t('message.from', { name: splitFullName(share.user.name) }) }}</h6>
+        <h6 v-if="hides('sender')">{{ $t('message.title') }}</h6>
+        <h6 v-else>{{ $t('message.from', { name: splitFullName(share.user.name) }) }}</h6>
         <div class="message">
           {{ share.description }}
         </div>
       </div>
-      <div class="download-button-container mt-3" v-if="!share.password_protected">
+      <div class="download-button-container mt-3" v-if="!locked">
         <button class="download-button" @click="downloadFiles">
           {{ $t('download.files', 'Download {value} files', { value: share.file_count }) }}
         </button>
@@ -200,14 +227,15 @@ const filesByDirectory = computed(() => {
             v-model="password"
             :placeholder="$t('settings.share.password')"
             :class="{ error: error }"
-            @keyup.enter="downloadPasswordProtectedFiles"
+            @keyup.enter="submitPassword"
           />
           <div class="error-message" v-if="error">
             {{ error }}
           </div>
         </div>
-        <button class="download-button mt-3" @click="downloadPasswordProtectedFiles">
-          {{ $t('download.files', 'Download {value} files', { value: share.file_count }) }}
+        <button class="download-button mt-3" @click="submitPassword" :disabled="unlocking">
+          <template v-if="hidesAnything">{{ $t('share.download.unlock') }}</template>
+          <template v-else>{{ $t('download.files', 'Download {value} files', { value: share.file_count }) }}</template>
         </button>
       </div>
     </template>
@@ -336,6 +364,21 @@ const filesByDirectory = computed(() => {
   margin-bottom: 0!important;
 }
 
+
+.share-files-locked {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+  color: var(--panel-text-color);
+  opacity: 0.7;
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
 
 .share-expires {
   width: 100%;

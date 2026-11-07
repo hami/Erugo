@@ -16,6 +16,7 @@ use App\Services\SettingsService;
 use App\Services\PatternGenerator;
 use App\Jobs\cleanSpecificShares;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 
 class SharesController extends Controller
 {
@@ -35,6 +36,97 @@ class SharesController extends Controller
   public function read($shareId)
   {
     $share = Share::where('long_id', $shareId)->with(['files', 'user'])->first();
+    if ($error = $this->shareUnavailableResponse($share)) {
+      return $error;
+    }
+
+    return response()->json([
+      'status' => 'success',
+      'message' => 'Share found',
+      'data' => [
+
+        'share' => $this->formatSharePublic($share, $this->isUnlocked($share))
+
+      ]
+    ]);
+  }
+
+  /**
+   * Once a visitor enters a share's password they get a cookie that unlocks it until the
+   * share expires. Its value is a signature over the share's id, link and password hash,
+   * so a new password or a new link revokes every remembered unlock.
+   */
+  private function unlockCookieName(Share $share): string
+  {
+    return 'share_unlock_' . $share->id;
+  }
+
+  private function unlockToken(Share $share): string
+  {
+    return hash_hmac('sha256', $share->id . '|' . $share->long_id . '|' . $share->password, config('app.key'));
+  }
+
+  private function isUnlocked(Share $share): bool
+  {
+    if (!$share->password) {
+      return true;
+    }
+    $cookie = request()->cookie($this->unlockCookieName($share));
+    return is_string($cookie) && hash_equals($this->unlockToken($share), $cookie);
+  }
+
+  private function unlockCookie(Share $share)
+  {
+    $minutes = max(1, (int) ceil(Carbon::now()->diffInMinutes($share->expires_at, false)));
+    return cookie(
+      $this->unlockCookieName($share),
+      $this->unlockToken($share),
+      $minutes,
+      '/',
+      null,
+      request()->isSecure(),
+      true,
+      false,
+      'lax'
+    );
+  }
+
+  /**
+   * Check a password-protected share's password, the one place this is done.
+   * A valid unlock cookie counts as the password. Wrong guesses are rate limited
+   * per share and IP address.
+   *
+   * @return true|string true, or 'password_required', 'invalid_password' or 'too_many_attempts'
+   */
+  private function checkSharePassword(Share $share, $password)
+  {
+    if ($this->isUnlocked($share)) {
+      return true;
+    }
+
+    $key = 'share-password:' . $share->id . '|' . request()->ip();
+    if (RateLimiter::tooManyAttempts($key, 10)) {
+      return 'too_many_attempts';
+    }
+
+    if (!$password) {
+      return 'password_required';
+    }
+
+    if (!Hash::check($password, $share->password)) {
+      RateLimiter::hit($key, 600);
+      return 'invalid_password';
+    }
+
+    RateLimiter::clear($key);
+    return true;
+  }
+
+  /**
+   * The JSON error for a share that can't be viewed, or null if it can.
+   */
+  private function shareUnavailableResponse(?Share $share)
+  {
     if (!$share) {
       return response()->json([
         'status' => 'error',
@@ -63,29 +155,60 @@ class SharesController extends Controller
       ], 404);
     }
 
-    return response()->json([
-      'status' => 'success',
-      'message' => 'Share found',
-      'data' => [
-
-        'share' => $this->formatSharePublic($share)
-
-      ]
-    ]);
+    return null;
   }
 
-  private function formatSharePublic(Share $share)
+  /**
+   * Check a share's password and, if it's right, return the share with its files
+   * and remember the unlock in a cookie.
+   */
+  public function unlock($shareId, Request $request)
   {
+    $share = Share::where('long_id', $shareId)->with(['files', 'user'])->first();
+    if ($error = $this->shareUnavailableResponse($share)) {
+      return $error;
+    }
+
+    $result = $this->checkSharePassword($share, $request->input('password'));
+    if ($result !== true) {
+      $messages = [
+        'password_required' => 'Password required',
+        'invalid_password' => 'Invalid password',
+        'too_many_attempts' => 'Too many attempts',
+      ];
+      return response()->json([
+        'status' => 'error',
+        'message' => $messages[$result]
+      ], $result === 'too_many_attempts' ? 429 : 401);
+    }
+
+    return response()->json([
+      'status' => 'success',
+      'message' => 'Share unlocked',
+      'data' => [
+        'share' => $this->formatSharePublic($share, true)
+      ]
+    ])->withCookie($this->unlockCookie($share));
+  }
+
+  private function formatSharePublic(Share $share, bool $unlocked = false)
+  {
+    // A locked password-protected share keeps the details listed in locked_hidden to itself
+    $hidden = $share->password && !$unlocked
+      ? array_values(array_intersect(Share::LOCKED_HIDEABLE, $share->locked_hidden ?? []))
+      : [];
+    $hides = fn(string $detail) => in_array($detail, $hidden, true);
+
     return [
       'id' => $share->id,
-      'name' => $share->name,
-      'description' => $share->description,
+      'name' => $hides('name') ? null : $share->name,
+      'description' => $hides('message') ? null : $share->description,
       'expires_at' => $share->expires_at,
       'download_limit' => $share->download_limit,
       'download_count' => $share->download_count,
-      'size' => $share->size,
-      'file_count' => $share->file_count,
-      'files' => $share->files->map(function ($file) {
+      'size' => $hides('stats') ? null : $share->size,
+      'file_count' => $hides('stats') ? null : $share->file_count,
+      'files' => $hides('files') ? [] : $share->files->map(function ($file) {
         return [
           'id' => $file->id,
           'name' => $file->display_name, // Show original filename to users
@@ -97,9 +220,11 @@ class SharesController extends Controller
         ];
       }),
       'user' => [
-        'name' => $share->user ? $share->user->name : 'Guest User',
+        'name' => $hides('sender') ? null : ($share->user ? $share->user->name : 'Guest User'),
       ],
-      'password_protected' => $share->password ? true : false
+      'password_protected' => $share->password ? true : false,
+      'unlocked' => $share->password ? $unlocked : true,
+      'hidden' => $hidden
     ];
   }
 
@@ -166,14 +291,9 @@ class SharesController extends Controller
       return redirect()->to('/shares/' . $shareId);
     }
 
-    if ($share->password) {
-      $password = request()->input('password');
-      if (!$password) {
-        return redirect()->to('/shares/' . $shareId . '?error=password_required');
-      }
-      if (!Hash::check($password, $share->password)) {
-        return redirect()->to('/shares/' . $shareId . '?error=invalid_password');
-      }
+    $passwordCheck = $this->checkSharePassword($share, request()->input('password'));
+    if ($passwordCheck !== true) {
+      return redirect()->to('/shares/' . $shareId . '?error=' . $passwordCheck);
     }
 
     if ($share->expires_at < Carbon::now()) {
@@ -260,14 +380,12 @@ class SharesController extends Controller
       return response()->json(['error' => 'Share not found'], 404);
     }
 
-    if ($share->password) {
-      $password = request()->input('password');
-      if (!$password) {
-        return response()->json(['error' => 'Password required'], 401);
-      }
-      if (!Hash::check($password, $share->password)) {
-        return response()->json(['error' => 'Invalid password'], 401);
-      }
+    $passwordCheck = $this->checkSharePassword($share, request()->input('password'));
+    if ($passwordCheck === 'too_many_attempts') {
+      return response()->json(['error' => 'Too many attempts'], 429);
+    }
+    if ($passwordCheck !== true) {
+      return response()->json(['error' => $passwordCheck === 'password_required' ? 'Password required' : 'Invalid password'], 401);
     }
 
     if ($share->expires_at < Carbon::now()) {

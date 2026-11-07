@@ -444,6 +444,46 @@ class SettingsSeeder extends Seeder
                 'group' => 'system.emails.subjects',
                 'created_at' => now(),
                 'updated_at' => now()
+            ],
+            [
+                'key' => 'locked_hidden_default_files',
+                'value' => 'false',
+                'previous_value' => null,
+                'group' => 'system.shares',
+                'created_at' => now(),
+                'updated_at' => now()
+            ],
+            [
+                'key' => 'locked_hidden_default_stats',
+                'value' => 'false',
+                'previous_value' => null,
+                'group' => 'system.shares',
+                'created_at' => now(),
+                'updated_at' => now()
+            ],
+            [
+                'key' => 'locked_hidden_default_message',
+                'value' => 'false',
+                'previous_value' => null,
+                'group' => 'system.shares',
+                'created_at' => now(),
+                'updated_at' => now()
+            ],
+            [
+                'key' => 'locked_hidden_default_sender',
+                'value' => 'false',
+                'previous_value' => null,
+                'group' => 'system.shares',
+                'created_at' => now(),
+                'updated_at' => now()
+            ],
+            [
+                'key' => 'locked_hidden_default_name',
+                'value' => 'false',
+                'previous_value' => null,
+                'group' => 'system.shares',
+                'created_at' => now(),
+                'updated_at' => now()
             ]
 
         ]);
