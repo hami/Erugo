@@ -69,7 +69,12 @@
         # Handle Laravel's front controller pattern
         try_files {path} {path}/ /index.php?{query}
         
-        # Enable PHP processing
-        php_fastcgi unix//run/php/php-fpm.sock
+        # Enable PHP processing. Pass on the X-Forwarded-* headers from a proxy in front of the
+        # container (as for tusd above); Laravel only believes them from TRUSTED_PROXIES.
+        php_fastcgi unix//run/php/php-fpm.sock {
+            header_up X-Forwarded-Proto {header.X-Forwarded-Proto}
+            header_up X-Forwarded-Host {header.X-Forwarded-Host}
+            header_up X-Forwarded-For {header.X-Forwarded-For}
+        }
     }
 }
