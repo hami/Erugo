@@ -592,6 +592,7 @@
       "pruneExpiredShares": "Failed to schedule expired shares for deletion!",
       "shareExpired": "Failed to expire share",
       "shareExtended": "Failed to extend share",
+      "shareDownload": "Failed to download share",
       "shareDeleted": "Failed to delete share"
     },
     "help": {
@@ -954,6 +955,10 @@
       "smtp_username_description": "The username required to authenticate with your SMTP server. This is typically the email address or account name associated with your email service.",
       "upload_modes": "Upload modes",
       "your_auth_providers": "Your Auth Providers",
+      "admin_download_expired_enabled": "Let admins download expired shares",
+      "admin_download_expired_enabled_description": "Lets admins download any share whose files haven't been cleaned up yet, including expired, used-up and password-protected ones. These downloads aren't counted against a share's download limit.",
+      "owner_download_expired_enabled": "Let people download their own expired shares",
+      "owner_download_expired_enabled_description": "Lets people download their own shares from My Shares until the files are cleaned up, even after the share has expired or run out of downloads. These downloads aren't counted either.",
       "locked_hidden_defaults": "Hidden on locked shares",
       "locked_hidden_defaults_description": "What a password-protected share hides until the password is entered. These are the starting choices for new shares; they can be changed when a share is created or edited afterwards.",
       "remember_recipients_default": "Remember recipients on new shares",

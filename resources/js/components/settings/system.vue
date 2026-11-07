@@ -68,6 +68,8 @@ const settings = ref({
   recipient_suggestions_enabled: true,
   password_in_email_allowed: true,
   owner_share_delete_enabled: true,
+  admin_download_expired_enabled: true,
+  owner_download_expired_enabled: true,
   locked_hidden_default_files: false,
   locked_hidden_default_stats: false,
   locked_hidden_default_message: false,
@@ -731,6 +733,18 @@ const handleDeleteAuthProvider = async (id) => {
                     <label for="owner_share_delete_enabled">{{ $t('settings.system.owner_share_delete_enabled') }}</label>
                   </div>
                 </div>
+                <div class="setting-group-body-item">
+                  <div class="checkbox-container">
+                    <input type="checkbox" id="admin_download_expired_enabled" v-model="settings.admin_download_expired_enabled" />
+                    <label for="admin_download_expired_enabled">{{ $t('settings.system.admin_download_expired_enabled') }}</label>
+                  </div>
+                </div>
+                <div class="setting-group-body-item">
+                  <div class="checkbox-container">
+                    <input type="checkbox" id="owner_download_expired_enabled" v-model="settings.owner_download_expired_enabled" />
+                    <label for="owner_download_expired_enabled">{{ $t('settings.system.owner_download_expired_enabled') }}</label>
+                  </div>
+                </div>
                 <div class="setting-group-body-item forget-recipient">
                   <label for="forget_recipient_email">{{ $t('settings.system.forget_recipient') }}</label>
                   <div class="forget-recipient-row">
@@ -824,6 +838,10 @@ const handleDeleteAuthProvider = async (id) => {
               <p>{{ $t('settings.system.password_in_email_allowed_description') }}</p>
               <h6>{{ $t('settings.system.owner_share_delete_enabled') }}</h6>
               <p>{{ $t('settings.system.owner_share_delete_enabled_description') }}</p>
+              <h6>{{ $t('settings.system.admin_download_expired_enabled') }}</h6>
+              <p>{{ $t('settings.system.admin_download_expired_enabled_description') }}</p>
+              <h6>{{ $t('settings.system.owner_download_expired_enabled') }}</h6>
+              <p>{{ $t('settings.system.owner_download_expired_enabled_description') }}</p>
               <h6>{{ $t('settings.system.forget_recipient') }}</h6>
               <p>{{ $t('settings.system.forget_recipient_description') }}</p>
               <h6>{{ $t('settings.system.locked_hidden_defaults') }}</h6>

@@ -30,6 +30,8 @@ function getSettings()
         ->orWhere('key', 'recipient_suggestions_enabled')
         ->orWhere('key', 'password_in_email_allowed')
         ->orWhere('key', 'owner_share_delete_enabled')
+        ->orWhere('key', 'admin_download_expired_enabled')
+        ->orWhere('key', 'owner_download_expired_enabled')
         ->get();
 
     $settings = $settings->map(function ($setting) use ($settingsService) {
