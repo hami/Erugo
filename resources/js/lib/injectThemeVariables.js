@@ -164,6 +164,22 @@ const injectThemeVariables = (location, theme) => {
     injectionPoint.style.setProperty('--color-warning', theme.status?.warning ?? 'rgb(234, 179, 8)')
     injectionPoint.style.setProperty('--color-danger', theme.status?.danger ?? 'rgb(239, 68, 68)')
 
+    // Footer (optional): the "Powered by" line sits on the background, so a theme may need it
+    // to stand out on its own. Without the section the footer keeps using the panel colours.
+    const footerVariables = {
+      '--footer-background-color': theme.footer?.background,
+      '--footer-text-color': theme.footer?.text,
+      '--footer-link-color': theme.footer?.link,
+      '--footer-link-color-hover': theme.footer?.linkHover
+    }
+    for (const [name, value] of Object.entries(footerVariables)) {
+      if (value) {
+        injectionPoint.style.setProperty(name, value)
+      } else {
+        injectionPoint.style.removeProperty(name)
+      }
+    }
+
     // Dimensions (if provided)
     if (theme.dimensions) {
       if (theme.dimensions.button) {
